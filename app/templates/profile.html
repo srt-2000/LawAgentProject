@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="profile-body">
+    <button class="close-btn" onclick="window.history.back()">×</button>
+    
+    <div class="profile-container">
+        <!-- Name -->
+        <div class="profile-row">
+            <div class="profile-label">Name</div>
+            <div class="profile-value">
+                <span>{{ profile.name }}</span>
+            </div>
+        </div>
+        <hr class="profile-divider">
+
+        <!-- Email -->
+        <div class="profile-row">
+            <div class="profile-label">Email address</div>
+            <div class="profile-value">
+                <span>{{ profile.email }}</span>
+            </div>
+        </div>
+        <hr class="profile-divider">
+
+        <!-- Log out -->
+        <div class="profile-row">
+            <div class="profile-label">Log out of all devices</div>
+            <div class="profile-value">
+                <button class="btn-danger" onclick="logout()">Log out</button>
+            </div>
+        </div>
+        <hr class="profile-divider">
+
+        <!-- Delete account -->
+        <div class="profile-row">
+            <div class="profile-label">Delete account</div>
+            <div class="profile-value">
+                <button class="btn-danger" disabled>Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function logout() {
+            if (confirm('Вы уверены, что хотите выйти из всех устройств?')) {
+                try {
+                    const response = await fetch('/user/logout', {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    if (response.ok) {
+                        window.location.href = '/';
+                    }
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

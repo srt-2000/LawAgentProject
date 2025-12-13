@@ -1,0 +1,160 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 600px;
+    margin: 50px auto;
+    padding: 20px;
+}
+
+#status {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.connected {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.disconnected {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+#messages {
+    list-style-type: none;
+    padding: 0;
+    height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+#messages li {
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 5px;
+}
+
+#messages li.sent {
+    background-color: #007bff;
+    color: white;
+    text-align: right;
+}
+
+#messages li.received {
+    background-color: #f1f1f1;
+    color: #333;
+}
+
+form {
+    display: flex;
+    gap: 10px;
+}
+
+#messageText {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* Profile page styles */
+body.profile-body {
+    background-color: #1e1e1e;
+    color: #ffffff;
+    max-width: 800px;
+    position: relative;
+}
+
+.close-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 32px;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    line-height: 1;
+}
+
+.profile-container {
+    margin-top: 60px;
+}
+
+.profile-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.profile-label {
+    font-size: 14px;
+    color: #ffffff;
+}
+
+.profile-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #ffffff;
+}
+
+.google-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #4285f4 0%, #34a853 25%, #fbbc05 50%, #ea4335 100%);
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.profile-divider {
+    border: none;
+    border-top: 1px solid #333333;
+    margin: 0;
+}
+
+.btn-danger {
+    padding: 8px 20px;
+    background: transparent;
+    color: #ff6b6b;
+    border: 1px solid #ff6b6b;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #ff6b6b;
+    color: #ffffff;
+}
+

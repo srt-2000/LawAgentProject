@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat</title>
+        <link rel="stylesheet" href="/static/css/styles.css">
+    </head>
+    <body>
+        <h1>WebSocket Chat</h1>
+        <div id="status" class="disconnected">Отключено</div>
+        <div>
+            <strong>User ID:</strong> <span id="user-id"></span>
+        </div>
+        <ul id='messages'></ul>
+        <form action="" onsubmit="sendMessage(event)">
+            <input type="text" id="messageText" autocomplete="off" placeholder="Введите сообщение..." disabled/>
+            <button type="submit" id="sendButton" disabled>Send</button>
+        </form>
+        <script src="/static/scripts/scripts.js"></script>
+    </body>
+</html>
