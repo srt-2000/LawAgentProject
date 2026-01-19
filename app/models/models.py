@@ -1,3 +1,10 @@
+"""
+Database models for users, chats, and messages.
+
+This module defines SQLAlchemy ORM models for the application's
+core entities: users, chats, and messages.
+"""
+
 from enum import Enum
 
 from sqlalchemy import Integer, String, ForeignKey, Text, BOOLEAN, Enum as SQLEnum
@@ -6,13 +13,25 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database import BaseSQLModel
 
 
-
 class Role(Enum):
+    """User role enumeration."""
+
     admin = "admin"
     user = "user"
 
 
 class User(BaseSQLModel):
+    """User model representing application users.
+
+    Attributes:
+        id: Primary key.
+        name: User's display name.
+        email: Unique email address.
+        password_hash: Hashed password.
+        role: User role (admin or user).
+        is_active: Account active status.
+        chats: Related chat sessions.
+    """
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
@@ -24,6 +43,11 @@ class User(BaseSQLModel):
     chats: Mapped[list["Chat"]] = relationship(back_populates="user")
 
     def __str__(self) -> str:
+        """String representation of the user.
+
+        Returns:
+            str: Formatted user information.
+        """
         return (
             f"{self.__class__.__name__}(id={self.id},"
             f"name={self.name},"
@@ -32,11 +56,24 @@ class User(BaseSQLModel):
         )
 
     def __repr__(self) -> str:
+        """Detailed representation of the user.
+
+        Returns:
+            str: Same as __str__.
+        """
         return str(self)
 
 
-
 class Chat(BaseSQLModel):
+    """Chat model representing conversation sessions.
+
+    Attributes:
+        id: Primary key.
+        title: Optional chat title.
+        user_id: Foreign key to user.
+        user: Related user.
+        messages: Related messages in this chat.
+    """
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(100), nullable=True)
@@ -46,6 +83,11 @@ class Chat(BaseSQLModel):
     messages: Mapped[list["Message"]] = relationship(back_populates="chat")
 
     def __str__(self) -> str:
+        """String representation of the chat.
+
+        Returns:
+            str: Formatted chat information.
+        """
         return (
             f"{self.__class__.__name__}(id={self.id},"
             f"title={self.title},"
@@ -53,11 +95,24 @@ class Chat(BaseSQLModel):
         )
 
     def __repr__(self) -> str:
+        """Detailed representation of the chat.
+
+        Returns:
+            str: Same as __str__.
+        """
         return str(self)
 
 
-
 class Message(BaseSQLModel):
+    """Message model representing individual chat messages.
+
+    Attributes:
+        id: Primary key.
+        context: Message content.
+        chat_id: Foreign key to chat.
+        is_bot: Whether message is from bot.
+        chat: Related chat.
+    """
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     context: Mapped[str] = mapped_column(Text)
@@ -67,6 +122,11 @@ class Message(BaseSQLModel):
     chat: Mapped["Chat"] = relationship("Chat", back_populates="messages")
 
     def __str__(self) -> str:
+        """String representation of the message.
+
+        Returns:
+            str: Formatted message information with truncated content.
+        """
         return (
             f"{self.__class__.__name__}(id={self.id},"
             f"context={self.context[:50]}...,"
@@ -75,4 +135,9 @@ class Message(BaseSQLModel):
         )
 
     def __repr__(self) -> str:
+        """Detailed representation of the message.
+
+        Returns:
+            str: Same as __str__.
+        """
         return str(self)
