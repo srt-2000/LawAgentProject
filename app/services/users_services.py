@@ -13,8 +13,9 @@ from fastapi import HTTPException, status
 from pydantic import EmailStr
 from app.config import settings
 from app.dao.users_dao import UserDAO
+from app.models.models import User
 from app.schemas.config_schema import AuthConfigDTO
-from app.schemas.users_schema import ResponseUserDTO, DBUserDTO
+from app.schemas.users_schema import ResponseUserDTO
 
 
 class PasswordService:
@@ -69,7 +70,7 @@ class AuthService(PasswordService):
         Raises:
             HTTPException: If user account is not active.
         """
-        user: DBUserDTO | None = await UserDAO.find_one_or_none(email=email)
+        user: User | None = await UserDAO.find_one_or_none(email=email)
 
         if not user or not cls.verify_password(
             plain_password=password, hashed_password=str(user.password_hash)
@@ -80,9 +81,7 @@ class AuthService(PasswordService):
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not active"
             )
 
-        return ResponseUserDTO.model_validate(
-            user.model_dump(exclude={"password_hash"})
-        )
+        return ResponseUserDTO.model_validate(user)
 
     @staticmethod
     def create_access_token(data: str) -> str:

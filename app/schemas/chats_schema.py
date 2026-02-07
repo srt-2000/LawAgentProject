@@ -7,7 +7,8 @@ This module defines Pydantic schemas for chat and message responses.
 from pydantic import ConfigDict, BaseModel
 
 
-class MessageOut(BaseModel):
+
+class MessageDTO(BaseModel):
     """Message response schema.
 
     Attributes:
@@ -25,7 +26,7 @@ class MessageOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ChatOut(BaseModel):
+class ChatDTO(BaseModel):
     """Chat response schema.
 
     Attributes:
@@ -38,6 +39,16 @@ class ChatOut(BaseModel):
     id: int
     title: str
     user_id: int
-    messages: list[MessageOut] | None = None
+    messages: list[MessageDTO] | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ChatCreateDTO(BaseModel):
+    title: str
+    user_id: int
+
+
+class ChatListDTO(BaseModel):
+    chat_list: list[ChatDTO] = []
+

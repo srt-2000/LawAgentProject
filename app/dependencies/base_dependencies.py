@@ -14,9 +14,10 @@ from jwt import DecodeError, ExpiredSignatureError
 
 from app.config import settings
 from app.dao.users_dao import UserDAO
+from app.models.models import User
 from app.schemas.config_schema import AuthConfigDTO
 from app.schemas.dependencies_schema import ResponsePayloadDTO
-from app.schemas.users_schema import ResponseUserDTO, DBUserDTO
+from app.schemas.users_schema import ResponseUserDTO
 
 
 async def decode_token(token: str) -> ResponsePayloadDTO:
@@ -78,7 +79,7 @@ async def get_current_active_user(payload: ResponsePayloadDTO) -> ResponseUserDT
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
-    user: DBUserDTO | None = await UserDAO.find_one_or_none(id=int(user_id))
+    user: User | None = await UserDAO.find_one_or_none(id=int(user_id))
 
     if not user:
         raise HTTPException(
@@ -90,4 +91,4 @@ async def get_current_active_user(payload: ResponsePayloadDTO) -> ResponseUserDT
             status_code=status.HTTP_403_FORBIDDEN, detail="User is disabled"
         )
 
-    return ResponseUserDTO.model_validate(user.model_dump(exclude={"password_hash"}))
+    return ResponseUserDTO.model_validate(user)

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
 from app.dao.users_dao import UserDAO
+from app.models.models import User
 from app.schemas.users_schema import (
     RequestUserRegistrationDTO,
     RequestUserAuthDTO,
@@ -15,7 +16,6 @@ from app.schemas.users_schema import (
     RequestUserUpdateDTO,
     ResponseMessageDTO,
     ResponseDataUserLoginDTO,
-    DBUserDTO,
 )
 from app.services.users_services import AuthService
 from app.dependencies.users_dependencies import CurrentUserDep
@@ -38,7 +38,7 @@ async def register_user(
     Raises:
         HTTPException: If user with email already exists.
     """
-    check_user: DBUserDTO | None = await UserDAO.find_one_or_none(
+    check_user: User | None = await UserDAO.find_one_or_none(
         email=new_user_data.email
     )
 
@@ -157,7 +157,7 @@ async def update_me(
 
     if update_data:
         await UserDAO.update(filter_by={"id": current_user.id}, **update_data)
-        updated_user: DBUserDTO | None = await UserDAO.find_one_or_none(
+        updated_user: User | None = await UserDAO.find_one_or_none(
             id=current_user.id
         )
 
@@ -167,9 +167,7 @@ async def update_me(
                 detail="User not found after update",
             )
 
-        return ResponseUserDTO.model_validate(
-            updated_user.model_dump(exclude={"password_hash"})
-        )
+        return ResponseUserDTO.model_validate(updated_user)
 
     return ResponseUserDTO.model_validate(current_user)
 
@@ -185,5 +183,5 @@ async def disable_me(current_user: CurrentUserDep) -> ResponseMessageDTO:
         ResponseMessageDTO: Confirmation message.
     """
     await UserDAO.update(filter_by={"id": current_user.id}, is_active=False)
-    message = {"message": "User is disabled"}
+    message: dict[str, str] = {"message": "User is disabled"}
     return ResponseMessageDTO.model_validate(message)

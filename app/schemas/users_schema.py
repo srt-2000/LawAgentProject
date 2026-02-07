@@ -8,7 +8,7 @@ from typing import Self
 
 from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
 
-from app.schemas.chats_schema import ChatOut
+from app.schemas.chats_schema import ChatDTO
 from app.models.models import Role
 
 
@@ -112,7 +112,7 @@ class ResponseUserDTO(BaseModel):
     email: EmailStr
     role: Role
     is_active: bool
-    chats: list[ChatOut] | None = None
+    chats: list[ChatDTO] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,7 +136,7 @@ class DBUserDTO(BaseModel):
     password_hash: str
     role: Role
     is_active: bool
-    chats: list[ChatOut] | None = None
+    chats: list[ChatDTO] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
