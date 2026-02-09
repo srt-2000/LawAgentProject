@@ -3,14 +3,14 @@ User Data Access Object.
 
 This module provides database access methods specific to User model.
 """
-from typing import cast
+
 
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 from sqlalchemy.engine import Result
 
-from app.dao.base_dao import BaseDAO, T
+from app.dao.base_dao import BaseDAO
 from app.database import async_session_maker
 from app.models.models import User, Chat
 
@@ -21,7 +21,7 @@ class UserDAO(BaseDAO[User]):
     model = User
 
     @classmethod
-    async def find_one_or_none(cls, **kwargs) -> T | None:
+    async def find_one_or_none(cls, **kwargs) -> User | None:
         """Find a single user by filter criteria with related chats.
 
         Args:
@@ -42,4 +42,4 @@ class UserDAO(BaseDAO[User]):
             if not user:
                 return None
 
-            return cast(T, user)
+            return user

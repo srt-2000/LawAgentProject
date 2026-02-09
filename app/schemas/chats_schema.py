@@ -4,8 +4,11 @@ Chat and message data transfer objects.
 This module defines Pydantic schemas for chat and message responses.
 """
 
-from pydantic import ConfigDict, BaseModel
+from datetime import datetime
 
+from pydantic import ConfigDict, BaseModel, field_validator
+
+from app.config import settings
 
 
 class MessageDTO(BaseModel):
@@ -26,7 +29,41 @@ class MessageDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ChatDTO(BaseModel):
+class ChatBaseDTO(BaseModel):
+    """Base chat schema with common fields.
+
+    Attributes:
+        id: Chat ID.
+        title: Chat title (defaults to welcome message if None).
+        user_id: Owner user ID.
+        created_at: Creation timestamp.
+    """
+
+    id: int
+    title: str | None
+    user_id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def title_none_default_validator(cls, title: str | None) -> str:
+        """Replace None title with default welcome message.
+
+        Args:
+            title: Raw title value.
+
+        Returns:
+            str: Title or default welcome message.
+        """
+        if title is None:
+            return settings.WELCOME_MESSAGE
+        else:
+            return title
+
+
+class ChatWithMessagesDTO(ChatBaseDTO):
     """Chat response schema.
 
     Attributes:
@@ -36,19 +73,20 @@ class ChatDTO(BaseModel):
         messages: List of messages in chat.
     """
 
-    id: int
-    title: str
-    user_id: int
     messages: list[MessageDTO] | None = None
 
-    model_config = ConfigDict(from_attributes=True)
 
+class ChatListSideBarItemDTO(ChatBaseDTO):
+    """Chat item schema for sidebar list (includes updated_at)."""
 
-class ChatCreateDTO(BaseModel):
-    title: str
-    user_id: int
+    updated_at: datetime
 
 
 class ChatListDTO(BaseModel):
-    chat_list: list[ChatDTO] = []
+    """Response schema for list of user chats.
 
+    Attributes:
+        chat_list: List of chat sidebar items.
+    """
+
+    chat_list: list[ChatListSideBarItemDTO] = []

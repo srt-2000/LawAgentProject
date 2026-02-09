@@ -40,6 +40,3 @@ async def websocket_chat(connection: WebSocket, user: WebsocketCurrentUserDep) -
             await chat_manager.send_message(stub_message, connection)
     except WebSocketDisconnect:
         await chat_manager.close_connection(connection, user.id)
-
-
-

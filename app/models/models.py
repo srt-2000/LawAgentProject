@@ -40,7 +40,9 @@ class User(BaseSQLModel):
     role: Mapped[Role] = mapped_column(SQLEnum(Role), default=Role.user, nullable=False)
     is_active: Mapped[bool] = mapped_column(BOOLEAN, default=True, nullable=False)
 
-    chats: Mapped[list["Chat"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    chats: Mapped[list["Chat"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
 
     def __str__(self) -> str:
         """String representation of the user.
@@ -77,10 +79,14 @@ class Chat(BaseSQLModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(100), nullable=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("user.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("user.id", ondelete="CASCADE")
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="chats")
-    messages: Mapped[list["Message"]] = relationship(back_populates="chat", cascade="all, delete-orphan")
+    messages: Mapped[list["Message"]] = relationship(
+        back_populates="chat", cascade="all, delete-orphan"
+    )
 
     def __str__(self) -> str:
         """String representation of the chat.
@@ -116,7 +122,9 @@ class Message(BaseSQLModel):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     context: Mapped[str] = mapped_column(Text)
-    chat_id: Mapped[int] = mapped_column(Integer, ForeignKey("chat.id", ondelete="CASCADE"))
+    chat_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("chat.id", ondelete="CASCADE")
+    )
     is_bot: Mapped[bool] = mapped_column(BOOLEAN, nullable=False)
 
     chat: Mapped["Chat"] = relationship("Chat", back_populates="messages")

@@ -26,7 +26,7 @@ router = APIRouter(prefix="/user", tags=["User"])
 @router.post("/register")
 async def register_user(
     new_user_data: RequestUserRegistrationDTO,
-) -> ResponseMessageDTO | None:
+) -> ResponseMessageDTO:
     """Register a new user.
 
     Args:
@@ -38,9 +38,7 @@ async def register_user(
     Raises:
         HTTPException: If user with email already exists.
     """
-    check_user: User | None = await UserDAO.find_one_or_none(
-        email=new_user_data.email
-    )
+    check_user: User | None = await UserDAO.find_one_or_none(email=new_user_data.email)
 
     if check_user:
         raise HTTPException(
@@ -157,9 +155,7 @@ async def update_me(
 
     if update_data:
         await UserDAO.update(filter_by={"id": current_user.id}, **update_data)
-        updated_user: User | None = await UserDAO.find_one_or_none(
-            id=current_user.id
-        )
+        updated_user: User | None = await UserDAO.find_one_or_none(id=current_user.id)
 
         if not updated_user:
             raise HTTPException(

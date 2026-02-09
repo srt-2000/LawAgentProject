@@ -14,13 +14,11 @@ class ConnectionManager:
 
     Attributes:
         active_connections: Map of user IDs to their active WebSocket connections.
-        user_chats: Map of user IDs to their chat IDs.
     """
 
     def __init__(self) -> None:
         """Initialize connection manager with empty connection maps."""
         self.active_connections: dict[int, set[WebSocket]] = {}
-        self.user_chats: dict[int, list[int]] = {}
 
     async def open_connection(self, connection: WebSocket, user_id: int) -> None:
         """Accept and register a new WebSocket connection.
@@ -33,8 +31,7 @@ class ConnectionManager:
 
         if user_id not in self.active_connections:
             self.active_connections[user_id] = set()
-        else:
-            self.active_connections[user_id].add(connection)
+        self.active_connections[user_id].add(connection)
 
     async def close_connection(self, connection: WebSocket, user_id: int) -> None:
         """Close and unregister a WebSocket connection.
