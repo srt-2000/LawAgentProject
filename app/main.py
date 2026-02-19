@@ -1,8 +1,8 @@
 """
-Main application entry point.
+Application entry point.
 
-This module initializes the FastAPI application and includes all routers
-for chat, pages, and users functionality.
+Creates the FastAPI app, mounts static files, and registers routers for
+WebSocket chat, HTTP pages, user auth, and chat CRUD.
 """
 
 from fastapi import FastAPI

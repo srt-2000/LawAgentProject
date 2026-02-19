@@ -1,8 +1,7 @@
 """
-Base Data Access Object for database operations.
+Generic DAO with async add, update, and delete.
 
-This module provides a generic DAO class with common CRUD operations
-for all database models.
+Subclass with model = YourModel to get CRUD. Each method uses its own session and commit.
 """
 
 from typing import TypeVar, Generic, Type, ClassVar, cast
@@ -18,13 +17,9 @@ T = TypeVar("T", bound=BaseSQLModel)
 
 
 class BaseDAO(Generic[T]):
-    """Base DAO providing common database operations.
+    """Generic async DAO: add(**kwargs), update(filter_by, **kwargs), delete(filter_by).
 
-    Type Parameters:
-        T: SQLAlchemy model type bound to BaseSQLModel.
-
-    Attributes:
-        model: SQLAlchemy model class to operate on.
+    Subclasses must set model to their SQLAlchemy model class.
     """
 
     model: ClassVar[Type[BaseSQLModel]]

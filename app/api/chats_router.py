@@ -1,8 +1,6 @@
 """
-Chat API router.
-
-This module provides HTTP endpoints for listing, creating, fetching,
-and deleting user chats.
+HTTP endpoints for chat CRUD: list, create, get one with messages, delete.
+All require the current user; chats are scoped to that user.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -15,9 +13,9 @@ from app.schemas.chats_schema import (
     ChatListDTO,
     ChatWithMessagesDTO,
     ChatListSideBarItemDTO,
-    ChatBaseDTO,
 )
 from app.schemas.users_schema import ResponseMessageDTO
+from app.services.chats_services import CurrentChatService
 
 router = APIRouter(prefix="/chat", tags=["Chats"])
 
@@ -53,23 +51,23 @@ async def get_user_chats_list(
 async def create_new_chat(
     current_user: CurrentUserDep,
     chat_dao: ChatDAODep
-) -> ChatBaseDTO:
+) -> ChatWithMessagesDTO:
     """Create a new chat for the current user.
+@router.post("/new_chat")
+async def create_new_chat(current_user: CurrentUserDep) -> ChatWithMessagesDTO:
+    Create a new chat for the current user. Returns the new chat with empty messages.
 
     Args:
         current_user: Authenticated current user,
         chat_dao: ChatDAO Dependency.
 
     Returns:
-        ChatBaseDTO: Created chat data.
+        ChatWithMessagesDTO: New chat (id, title, user_id, created_at, messages=[]).
     """
-    data_to_create_new_chat: dict[str, str | int] = {
-        "title": f"new_chat of {current_user.id}",
-        "user_id": current_user.id,
-    }
-    new_chat: Chat = await chat_dao.add(**data_to_create_new_chat)
+    chat_service: CurrentChatService = CurrentChatService(current_user.id)
+    new_chat: ChatWithMessagesDTO = await chat_service.create_new_chat()
 
-    return ChatBaseDTO.model_validate(new_chat)
+    return new_chat
 
 
 @router.get("/{chat_id}", response_model=ChatWithMessagesDTO)
@@ -78,25 +76,26 @@ async def get_chat_by_id(
     current_user: CurrentUserDep,
     chat_dao: ChatDAODep
 ) -> ChatWithMessagesDTO:
-    """Return a single chat with messages by ID for the current user.
+    """Return a single chat with messages by ID. Only if it belongs to the current user.
 
     Args:
-        chat_id: Chat ID.
+        chat_id: Chat ID to fetch.
         current_user: Authenticated current user.
         chat_dao: ChatDAO Dependency.
 
     Returns:
-        ChatWithMessagesDTO: Chat with its messages.
+        ChatWithMessagesDTO: Chat with messages.
 
     Raises:
         HTTPException: 404 if chat not found or not owned by user.
     """
-    chat: Chat | None = await chat_dao.find_one_or_none_by_id(
-        id=chat_id, user_id=current_user.id
-    )
+    chat_service: CurrentChatService = CurrentChatService(current_user.id)
+    chat: ChatWithMessagesDTO | None = await chat_service.get_chat_with_id(chat_id)
+
     if chat is None:
         raise HTTPException(status_code=404, detail="Chat not found")
-    return ChatWithMessagesDTO.model_validate(chat)
+
+    return chat
 
 
 @router.delete("/{chat_id}")

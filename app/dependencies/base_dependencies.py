@@ -1,8 +1,7 @@
 """
-Base dependencies for authentication.
+Shared auth logic for HTTP and WebSocket.
 
-This module provides core authentication dependencies for decoding
-tokens and retrieving active users.
+Decode JWT from cookie, validate expiry, and load the current active user from DB.
 """
 
 from datetime import datetime, timezone

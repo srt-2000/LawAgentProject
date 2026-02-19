@@ -1,7 +1,5 @@
 """
-User authentication and management router.
-
-This module handles user registration, login, logout, and profile management.
+User auth and profile: register, login (sets cookie), logout, me, update, disable.
 """
 
 from fastapi import APIRouter, HTTPException, status, Response

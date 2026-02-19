@@ -1,8 +1,5 @@
 """
-WebSocket-specific authentication dependencies.
-
-This module provides dependencies for authenticating WebSocket connections
-using cookies.
+WebSocket auth: read JWT from handshake cookies and resolve to current user.
 """
 
 from typing import Annotated
@@ -18,16 +15,16 @@ from app.schemas.users_schema import ResponseUserDTO
 
 
 def get_token_from_websocket(storage: WebSocket) -> str:
-    """Extract authentication token from WebSocket cookies.
+    """Extract JWT from the WebSocket handshake cookies.
 
     Args:
-        storage: WebSocket connection instance.
+        storage: WebSocket connection (cookies are taken from the handshake).
 
     Returns:
-        str: JWT access token.
+        str: JWT access token string.
 
     Raises:
-        HTTPException: If token not found in cookies.
+        HTTPException: 401 if cookie "users_access_token" is missing.
     """
     current_token: str | None = storage.cookies.get("users_access_token")
 

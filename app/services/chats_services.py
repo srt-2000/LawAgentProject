@@ -1,73 +1,101 @@
 """
-WebSocket connection management service.
+WebSocket and chat session management.
 
-This module manages WebSocket connections for chat functionality.
+This module provides connection tracking (one user, many connections) and
+chat lifecycle: create new chat, load existing chat by ID for the current user.
 """
 
 from fastapi import WebSocket
 
-from app.schemas.services_schema import WebSocketMessageDTO
+from app.dao.chats_dao import ChatDAO
+from app.models.models import Chat
+from app.schemas.chats_schema import ChatWithMessagesDTO
+from app.services.message_services import WSMessageServiceMixin
 
 
-class ConnectionManager:
-    """Manages WebSocket connections and message broadcasting.
-
-    Attributes:
-        active_connections: Map of user IDs to their active WebSocket connections.
-    """
+class WSConnectionManager(WSMessageServiceMixin):
+    """Tracks WebSocket connections per user. One user may have multiple connections."""
 
     def __init__(self) -> None:
-        """Initialize connection manager with empty connection maps."""
+        """Initialize empty map: user_id -> set of WebSocket connections."""
         self.active_connections: dict[int, set[WebSocket]] = {}
 
-    async def open_connection(self, connection: WebSocket, user_id: int) -> None:
-        """Accept and register a new WebSocket connection.
+    async def open_chat_connection(self, user_id: int, socket: WebSocket) -> None:
+        """Accept the WebSocket and register it for the given user.
 
         Args:
-            connection: WebSocket connection to accept.
-            user_id: ID of the user connecting.
+            user_id: ID of the authenticated user.
+            socket: The WebSocket connection to accept and track.
         """
-        await connection.accept()
+        await socket.accept()
 
         if user_id not in self.active_connections:
             self.active_connections[user_id] = set()
-        self.active_connections[user_id].add(connection)
+        self.active_connections[user_id].add(socket)
 
-    async def close_connection(self, connection: WebSocket, user_id: int) -> None:
-        """Close and unregister a WebSocket connection.
+    async def close_chat_connection(self, user_id: int, socket: WebSocket) -> None:
+        """Unregister the WebSocket for the user. Call when client disconnects.
 
         Args:
-            connection: WebSocket connection to close.
-            user_id: ID of the user disconnecting.
+            user_id: ID of the user who owns the connection.
+            socket: The WebSocket connection to remove.
         """
-        if user_id in self.active_connections:
-            self.active_connections[user_id].discard(connection)
-
-        if not self.active_connections[user_id]:
+        if (
+            user_id in self.active_connections
+            and socket in self.active_connections[user_id]
+        ):
+            self.active_connections[user_id].discard(socket)
+        if user_id in self.active_connections and not self.active_connections[user_id]:
             del self.active_connections[user_id]
 
-    @staticmethod
-    async def send_message(message: WebSocketMessageDTO, connection: WebSocket) -> None:
-        """Send a message through WebSocket connection with error handling.
+
+class CurrentChatService:
+    """Creates and loads chats for the current user (used by WebSocket and HTTP)."""
+
+    def __init__(self, current_user_id: int) -> None:
+        """Store the user ID for all operations.
 
         Args:
-            message: Message DTO to send.
-            connection: WebSocket connection to send through.
+            current_user_id: Authenticated user's ID.
         """
-        try:
-            serialized_message = message.model_dump()
-            await connection.send_json(serialized_message)
-        except (ConnectionResetError, BrokenPipeError) as error:
-            print(f"Client disconnected from WebSocket error {error}")
-        except RuntimeError as error:
-            error_msg = str(error).lower()
-            if "not connected" in error_msg or "disconnect" in error_msg:
-                print("WebSocket connection is closed")
-            elif "send" in error_msg and "await" in error_msg:
-                print("WebSocket send called in wrong state")
-            else:
-                print(f"WebSocket runtime error: {error}")
-        except ValueError as error:
-            print(f"Invalid data format for WebSocket, error: {error}")
-        except Exception as error:
-            print(f"Unexpected error sending message: {error}")
+        self.user_id: int = current_user_id
+
+    async def create_new_chat(self) -> ChatWithMessagesDTO:
+        """Create a new chat for the current user. Returns DTO with empty messages.
+
+        Returns:
+            ChatWithMessagesDTO: New chat with id, title, user_id, created_at, messages=[].
+        """
+        data_to_create_new_chat: dict[str, str | int] = {
+            "title": f"new_chat of {self.user_id}",
+            "user_id": self.user_id,
+        }
+        new_chat: Chat = await ChatDAO.add(**data_to_create_new_chat)
+
+        return ChatWithMessagesDTO(
+            id=new_chat.id,
+            title=new_chat.title,
+            user_id=new_chat.user_id,
+            created_at=new_chat.created_at,
+            messages=[],
+        )
+
+    async def get_chat_with_id(
+        self, current_chat_id: int
+    ) -> ChatWithMessagesDTO | None:
+        """Load a chat by ID if it belongs to the current user.
+
+        Args:
+            current_chat_id: Chat ID to load.
+
+        Returns:
+            ChatWithMessagesDTO if found and owned by user, None otherwise.
+        """
+        chat: Chat | None = await ChatDAO.find_one_or_none_by_id(
+            id=current_chat_id, user_id=self.user_id
+        )
+
+        if chat is None:
+            return None
+
+        return ChatWithMessagesDTO.model_validate(chat)

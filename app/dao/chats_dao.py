@@ -1,7 +1,7 @@
 """
-Chat Data Access Object.
+Chat data access.
 
-This module provides database access methods specific to the Chat model.
+Create, read, and delete chats; load one chat with messages or list user chats without messages.
 """
 
 from sqlalchemy import Select, select, Result, ScalarResult

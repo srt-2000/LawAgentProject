@@ -23,14 +23,14 @@ class RequestUserRegistrationDTO(BaseModel):
     """
 
     name: str = Field(
-        ..., min_length=2, max_length=50, description="Name, from 3 to 50 symbols"
+        ..., min_length=2, max_length=50, description="Display name, 2 to 50 characters"
     )
     email: EmailStr = Field(..., description="Email", examples=["user@example.com"])
     password: str = Field(
-        ..., min_length=6, max_length=50, description="Password, from 6 tp 50 symbols"
+        ..., min_length=6, max_length=50, description="Password, 6 to 50 characters"
     )
     password_confirm: str = Field(
-        ..., min_length=6, max_length=50, description="Password confirmation"
+        ..., min_length=6, max_length=50, description="Must match password"
     )
 
     @model_validator(mode="after")
@@ -58,7 +58,7 @@ class RequestUserAuthDTO(BaseModel):
 
     email: EmailStr = Field(..., description="Email", examples=["user@example.com"])
     password: str = Field(
-        ..., min_length=6, max_length=50, description="Password, from 6 tp 50 symbols"
+        ..., min_length=6, max_length=50, description="Password, 6 to 50 characters"
     )
 
 

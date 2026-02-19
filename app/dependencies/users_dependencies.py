@@ -1,8 +1,5 @@
 """
-HTTP request authentication dependencies.
-
-This module provides dependencies for authenticating standard HTTP requests
-using cookies.
+HTTP auth dependency: read JWT from request cookies and resolve to current user.
 """
 
 from typing import Annotated

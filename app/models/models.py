@@ -1,8 +1,8 @@
 """
-Database models for users, chats, and messages.
+ORM models for users, chats, and messages.
 
-This module defines SQLAlchemy ORM models for the application's
-core entities: users, chats, and messages.
+User has many Chats; Chat has many Messages. Role enum for user role.
+Cascade deletes: user -> chats -> messages.
 """
 
 from enum import Enum
