@@ -7,6 +7,7 @@ This module handles user registration, login, logout, and profile management.
 from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
+from app.api.api_constants import FieldNames
 from app.dao.users_dao import UserDAO
 from app.models.models import User
 from app.schemas.users_schema import (
@@ -45,13 +46,13 @@ async def register_user(
             status_code=status.HTTP_409_CONFLICT, detail="User is already exist"
         )
     new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
-        exclude={"password_confirm"}
+        exclude={FieldNames.PASSWORD_CONFIRM}
     )
-    new_user_data_to_add["password_hash"] = AuthService.get_password_hash(
-        new_user_data_to_add.pop("password")
+    new_user_data_to_add[FieldNames.PASSWORD_HASH] = AuthService.get_password_hash(
+        new_user_data_to_add.pop(FieldNames.PASSWORD)
     )
     await UserDAO.add(**new_user_data_to_add)
-    message = {"message": f"User {new_user_data.name} registered successfully"}
+    message: dict[str, str] = {FieldNames.MESSAGE_FIELD: f"User {new_user_data.name} registered successfully"}
     return ResponseMessageDTO.model_validate(message)
 
 
@@ -92,10 +93,10 @@ async def login_user(
         path="/",
     )
     response_data = {
-        "ok": True,
-        "access_token": access_token,
-        "refresh_token": None,
-        "message": "Authorisation successful",
+        FieldNames.OK: True,
+        FieldNames.ACCESS_TOKEN: access_token,
+        FieldNames.REFRESH_TOKEN: None,
+        FieldNames.MESSAGE_FIELD: "Authorisation successful",
     }
     return ResponseDataUserLoginDTO.model_validate(response_data)
 
@@ -111,7 +112,7 @@ async def logout_user(response: Response) -> ResponseMessageDTO:
         ResponseMessageDTO: Logout confirmation message.
     """
     response.delete_cookie(key="users_access_token")
-    message = {"message": "User is logout"}
+    message = {FieldNames.MESSAGE_FIELD: "User is logout"}
     return ResponseMessageDTO.model_validate(message)
 
 
@@ -145,12 +146,12 @@ async def update_me(
         HTTPException: If user not found after update.
     """
     update_data: dict[str, str | EmailStr] = update_user.model_dump(
-        exclude_none=True, exclude={"password_confirm"}
+        exclude_none=True, exclude={FieldNames.PASSWORD_CONFIRM}
     )
 
-    if "password" in update_data:
-        update_data["password_hash"] = AuthService.get_password_hash(
-            update_data.pop("password")
+    if FieldNames.PASSWORD in update_data:
+        update_data[FieldNames.PASSWORD_HASH] = AuthService.get_password_hash(
+            update_data.pop(FieldNames.PASSWORD)
         )
 
     if update_data:
@@ -179,5 +180,5 @@ async def disable_me(current_user: CurrentUserDep) -> ResponseMessageDTO:
         ResponseMessageDTO: Confirmation message.
     """
     await UserDAO.update(filter_by={"id": current_user.id}, is_active=False)
-    message: dict[str, str] = {"message": "User is disabled"}
+    message: dict[str, str] = {FieldNames.MESSAGE_FIELD: "User is disabled"}
     return ResponseMessageDTO.model_validate(message)
