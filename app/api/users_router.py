@@ -128,7 +128,7 @@ async def get_me(current_user: CurrentUserDep) -> ResponseUserDTO:
     return ResponseUserDTO.model_validate(current_user)
 
 
-@router.patch("/me/update", response_model=ResponseUserDTO)
+@router.patch("/me", response_model=ResponseUserDTO)
 async def update_me(
     update_user: RequestUserUpdateDTO, current_user: CurrentUserDep
 ) -> ResponseUserDTO:

@@ -19,7 +19,7 @@ from app.schemas.chats_schema import (
 )
 from app.schemas.users_schema import ResponseMessageDTO
 
-router = APIRouter(prefix="/user", tags=["Chats"])
+router = APIRouter(prefix="/chat", tags=["Chats"])
 
 
 @router.get("/chats", response_model=ChatListDTO)
@@ -45,7 +45,7 @@ async def get_user_chats_list(current_user: CurrentUserDep) -> ChatListDTO:
     return chats
 
 
-@router.post("/new_chat")
+@router.post("/")
 async def create_new_chat(current_user: CurrentUserDep) -> ChatBaseDTO:
     """Create a new chat for the current user.
 
@@ -64,8 +64,8 @@ async def create_new_chat(current_user: CurrentUserDep) -> ChatBaseDTO:
     return ChatBaseDTO.model_validate(new_chat)
 
 
-@router.get("/chats/{chat_id}", response_model=ChatWithMessagesDTO)
-async def get_chat_with_id(
+@router.get("/{chat_id}", response_model=ChatWithMessagesDTO)
+async def get_chat_by_id(
     chat_id: int, current_user: CurrentUserDep
 ) -> ChatWithMessagesDTO:
     """Return a single chat with messages by ID for the current user.
@@ -88,7 +88,7 @@ async def get_chat_with_id(
     return ChatWithMessagesDTO.model_validate(chat)
 
 
-@router.delete("/chats/{chat_id}")
+@router.delete("/{chat_id}")
 async def delete_chat_with_id(
     chat_id: int, current_user: CurrentUserDep
 ) -> ResponseMessageDTO:
