@@ -8,7 +8,7 @@ and deleting user chats.
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import ScalarResult
 
-from app.dao.chats_dao import ChatDAO
+from app.dependencies.dao_dependencies import ChatDAODep
 from app.dependencies.users_dependencies import CurrentUserDep
 from app.models.models import Chat
 from app.schemas.chats_schema import (
@@ -23,16 +23,20 @@ router = APIRouter(prefix="/chat", tags=["Chats"])
 
 
 @router.get("/chats", response_model=ChatListDTO)
-async def get_user_chats_list(current_user: CurrentUserDep) -> ChatListDTO:
+async def get_user_chats_list(
+    current_user: CurrentUserDep,
+    chat_dao: ChatDAODep
+) -> ChatListDTO:
     """Return list of chats for the current user.
 
     Args:
         current_user: Authenticated current user.
+        chat_dao: ChatDAO Dependency.
 
     Returns:
         ChatListDTO: List of user's chats as sidebar items.
     """
-    chats_scalar: ScalarResult[Chat] = await ChatDAO.get_user_chat_list(
+    chats_scalar: ScalarResult[Chat] = await chat_dao.get_user_chat_list(
         user_id=current_user.id
     )
     chats: ChatListDTO = ChatListDTO(
@@ -46,11 +50,15 @@ async def get_user_chats_list(current_user: CurrentUserDep) -> ChatListDTO:
 
 
 @router.post("/")
-async def create_new_chat(current_user: CurrentUserDep) -> ChatBaseDTO:
+async def create_new_chat(
+    current_user: CurrentUserDep,
+    chat_dao: ChatDAODep
+) -> ChatBaseDTO:
     """Create a new chat for the current user.
 
     Args:
-        current_user: Authenticated current user.
+        current_user: Authenticated current user,
+        chat_dao: ChatDAO Dependency.
 
     Returns:
         ChatBaseDTO: Created chat data.
@@ -59,20 +67,23 @@ async def create_new_chat(current_user: CurrentUserDep) -> ChatBaseDTO:
         "title": f"new_chat of {current_user.id}",
         "user_id": current_user.id,
     }
-    new_chat: Chat = await ChatDAO.add(**data_to_create_new_chat)
+    new_chat: Chat = await chat_dao.add(**data_to_create_new_chat)
 
     return ChatBaseDTO.model_validate(new_chat)
 
 
 @router.get("/{chat_id}", response_model=ChatWithMessagesDTO)
 async def get_chat_by_id(
-    chat_id: int, current_user: CurrentUserDep
+    chat_id: int,
+    current_user: CurrentUserDep,
+    chat_dao: ChatDAODep
 ) -> ChatWithMessagesDTO:
     """Return a single chat with messages by ID for the current user.
 
     Args:
         chat_id: Chat ID.
         current_user: Authenticated current user.
+        chat_dao: ChatDAO Dependency.
 
     Returns:
         ChatWithMessagesDTO: Chat with its messages.
@@ -80,7 +91,7 @@ async def get_chat_by_id(
     Raises:
         HTTPException: 404 if chat not found or not owned by user.
     """
-    chat: Chat | None = await ChatDAO.find_one_or_none_by_id(
+    chat: Chat | None = await chat_dao.find_one_or_none_by_id(
         id=chat_id, user_id=current_user.id
     )
     if chat is None:
@@ -90,18 +101,21 @@ async def get_chat_by_id(
 
 @router.delete("/{chat_id}")
 async def delete_chat_with_id(
-    chat_id: int, current_user: CurrentUserDep
+    chat_id: int,
+    current_user: CurrentUserDep,
+    chat_dao: ChatDAODep
 ) -> ResponseMessageDTO:
     """Delete a chat by ID for the current user.
 
     Args:
         chat_id: Chat ID.
         current_user: Authenticated current user.
+        chat_dao: ChatDAO Dependency.
 
     Returns:
         ResponseMessageDTO: Message with count of deleted chats.
     """
-    deleted_chats_count: int = await ChatDAO.delete(
+    deleted_chats_count: int = await chat_dao.delete(
         filter_by={"id": chat_id, "user_id": current_user.id}
     )
     message: dict[str, str] = {"message": f"{deleted_chats_count} chats deleted"}

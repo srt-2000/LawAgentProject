@@ -121,7 +121,6 @@ class Settings(BaseAppSettings):
 
     database: DatabaseSettings
     auth: AuthSettings
-    WELCOME_MESSAGE: str = "Hello! How can I help you?"
 
 
 def get_settings() -> Settings:

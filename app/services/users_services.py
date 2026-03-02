@@ -12,7 +12,7 @@ import jwt
 from fastapi import HTTPException, status
 from pydantic import EmailStr
 from app.config import settings
-from app.dao.users_dao import UserDAO
+from app.dependencies.dao_dependencies import UserDAODep
 from app.models.models import User
 from app.schemas.config_schema import AuthConfigDTO
 from app.schemas.users_schema import ResponseUserDTO
@@ -56,13 +56,17 @@ class AuthService(PasswordService):
 
     @classmethod
     async def authenticate_user(
-        cls, email: EmailStr, password: str
+        cls,
+        email: EmailStr,
+        password: str,
+        user_dao: UserDAODep
     ) -> ResponseUserDTO | None:
         """Authenticate user by email and password.
 
         Args:
             email: User's email address.
             password: User's plain text password.
+            user_dao: UserDAO Dependency.
 
         Returns:
             ResponseUserDTO | None: User data if authenticated, None if invalid credentials.
@@ -70,7 +74,7 @@ class AuthService(PasswordService):
         Raises:
             HTTPException: If user account is not active.
         """
-        user: User | None = await UserDAO.find_one_or_none(email=email)
+        user: User | None = await user_dao.find_one_or_none(email=email)
 
         if not user or not cls.verify_password(
             plain_password=password, hashed_password=str(user.password_hash)

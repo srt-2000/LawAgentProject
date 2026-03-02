@@ -6,10 +6,10 @@ This module handles WebSocket connections for real-time chat functionality.
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.api.api_constants import StandardMessages
 from app.dependencies.chats_dependencies import WebsocketCurrentUserDep
 from app.schemas.services_schema import WebSocketMessageDTO
 from app.services.chats_services import ConnectionManager
-from app.config import settings
 
 router = APIRouter(prefix="/ws/chat")
 chat_manager = ConnectionManager()
@@ -26,7 +26,7 @@ async def websocket_chat(connection: WebSocket, user: WebsocketCurrentUserDep) -
     """
     await chat_manager.open_connection(connection, user.id)
     welcome_message: WebSocketMessageDTO = WebSocketMessageDTO(
-        message=settings.WELCOME_MESSAGE
+        message=StandardMessages.WELCOME_MESSAGE
     )
     WebSocketMessageDTO.model_validate(welcome_message)
     await chat_manager.send_message(welcome_message, connection)

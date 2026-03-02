@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
 from app.api.api_constants import FieldNames
-from app.dao.users_dao import UserDAO
+from app.dependencies.dao_dependencies import UserDAODep
 from app.models.models import User
 from app.schemas.users_schema import (
     RequestUserRegistrationDTO,
@@ -27,11 +27,13 @@ router = APIRouter(prefix="/user", tags=["User"])
 @router.post("/register")
 async def register_user(
     new_user_data: RequestUserRegistrationDTO,
+    user_dao: UserDAODep
 ) -> ResponseMessageDTO:
     """Register a new user.
 
     Args:
         new_user_data: User registration data.
+        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseMessageDTO: Success message with username.
@@ -39,7 +41,7 @@ async def register_user(
     Raises:
         HTTPException: If user with email already exists.
     """
-    check_user: User | None = await UserDAO.find_one_or_none(email=new_user_data.email)
+    check_user: User | None = await user_dao.find_one_or_none(email=new_user_data.email)
 
     if check_user:
         raise HTTPException(
@@ -51,20 +53,25 @@ async def register_user(
     new_user_data_to_add[FieldNames.PASSWORD_HASH] = AuthService.get_password_hash(
         new_user_data_to_add.pop(FieldNames.PASSWORD)
     )
-    await UserDAO.add(**new_user_data_to_add)
-    message: dict[str, str] = {FieldNames.MESSAGE_FIELD: f"User {new_user_data.name} registered successfully"}
+    await user_dao.add(**new_user_data_to_add)
+    message: dict[str, str] = {
+        FieldNames.MESSAGE_FIELD: f"User {new_user_data.name} registered successfully"
+    }
     return ResponseMessageDTO.model_validate(message)
 
 
 @router.post("/login")
 async def login_user(
-    response: Response, login_user_data: RequestUserAuthDTO
+    response: Response,
+    login_user_data: RequestUserAuthDTO,
+    user_dao: UserDAODep
 ) -> ResponseDataUserLoginDTO | None:
     """Authenticate user and set access token cookie.
 
     Args:
         response: FastAPI response object to set cookies.
         login_user_data: User login credentials.
+        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseDataUserLoginDTO: Login response with tokens.
@@ -73,7 +80,9 @@ async def login_user(
         HTTPException: If credentials are invalid.
     """
     check_user: ResponseUserDTO | None = await AuthService.authenticate_user(
-        email=login_user_data.email, password=login_user_data.password
+        email=login_user_data.email,
+        password=login_user_data.password,
+        user_dao=user_dao,
     )
 
     if check_user is None:
@@ -131,13 +140,16 @@ async def get_me(current_user: CurrentUserDep) -> ResponseUserDTO:
 
 @router.patch("/me", response_model=ResponseUserDTO)
 async def update_me(
-    update_user: RequestUserUpdateDTO, current_user: CurrentUserDep
+    update_user: RequestUserUpdateDTO,
+    current_user: CurrentUserDep,
+    user_dao: UserDAODep,
 ) -> ResponseUserDTO:
     """Update current user's profile information.
 
     Args:
         update_user: Fields to update.
         current_user: Authenticated current user.
+        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseUserDTO: Updated user data.
@@ -155,8 +167,8 @@ async def update_me(
         )
 
     if update_data:
-        await UserDAO.update(filter_by={"id": current_user.id}, **update_data)
-        updated_user: User | None = await UserDAO.find_one_or_none(id=current_user.id)
+        await user_dao.update(filter_by={"id": current_user.id}, **update_data)
+        updated_user: User | None = await user_dao.find_one_or_none(id=current_user.id)
 
         if not updated_user:
             raise HTTPException(
@@ -170,15 +182,19 @@ async def update_me(
 
 
 @router.patch("/me/disable")
-async def disable_me(current_user: CurrentUserDep) -> ResponseMessageDTO:
+async def disable_me(
+    current_user: CurrentUserDep,
+    user_dao: UserDAODep
+) -> ResponseMessageDTO:
     """Disable current user's account.
 
     Args:
         current_user: Authenticated current user.
+        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseMessageDTO: Confirmation message.
     """
-    await UserDAO.update(filter_by={"id": current_user.id}, is_active=False)
+    await user_dao.update(filter_by={"id": current_user.id}, is_active=False)
     message: dict[str, str] = {FieldNames.MESSAGE_FIELD: "User is disabled"}
     return ResponseMessageDTO.model_validate(message)

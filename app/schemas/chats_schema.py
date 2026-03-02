@@ -8,7 +8,7 @@ from datetime import datetime
 
 from pydantic import ConfigDict, BaseModel, field_validator
 
-from app.config import settings
+from app.api.api_constants import StandardMessages
 
 
 class MessageDTO(BaseModel):
@@ -58,7 +58,7 @@ class ChatBaseDTO(BaseModel):
             str: Title or default welcome message.
         """
         if title is None:
-            return settings.WELCOME_MESSAGE
+            return StandardMessages.WELCOME_MESSAGE
         else:
             return title
 
