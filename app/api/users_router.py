@@ -164,15 +164,9 @@ async def update_me(
         )
 
     if update_data:
-        updated_user: User | None = await user_dao.update(
+        updated_user: User = await user_dao.update(
             filter_by={"id": current_user.id}, **update_data
         )
-
-        if not updated_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found after update",
-            )
 
         return ResponseUserDTO.model_validate(updated_user)
 
@@ -192,6 +186,6 @@ async def disable_me(
     Returns:
         ResponseMessageDTO: Confirmation message.
     """
-    disabled_user: User | None = await user_dao.update(filter_by={"id": current_user.id}, is_active=False)
+    disabled_user: User = await user_dao.update(filter_by={"id": current_user.id}, is_active=False)
     message: dict[str, str] = {FieldNames.MESSAGE_FIELD: f"User {disabled_user.name} is disabled"}
     return ResponseMessageDTO.model_validate(message)

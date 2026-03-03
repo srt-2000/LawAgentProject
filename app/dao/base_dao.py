@@ -7,6 +7,7 @@ for all database models.
 
 from typing import TypeVar, Generic, Type, ClassVar, cast
 
+from fastapi import HTTPException, status
 from sqlalchemy import delete, select, Select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result, CursorResult
@@ -52,7 +53,7 @@ class BaseDAO(Generic[T]):
 
     async def update(
         self, filter_by: dict[str, str | int | bool], **kwargs
-    ) -> T | None:
+    ) -> T:
         """Update records matching the filter criteria.
 
         Args:
@@ -74,7 +75,10 @@ class BaseDAO(Generic[T]):
         updated_object: T | None = result.scalar_one_or_none()
 
         if updated_object is None:
-            return None
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found after update",
+            )
 
         for key, value in kwargs.items():
             setattr(updated_object, key, value)
