@@ -26,8 +26,7 @@ router = APIRouter(prefix="/user", tags=["User"])
 
 @router.post("/register")
 async def register_user(
-    new_user_data: RequestUserRegistrationDTO,
-    user_dao: UserDAODep
+    new_user_data: RequestUserRegistrationDTO, user_dao: UserDAODep
 ) -> ResponseMessageDTO:
     """Register a new user.
 
@@ -62,9 +61,7 @@ async def register_user(
 
 @router.post("/login")
 async def login_user(
-    response: Response,
-    login_user_data: RequestUserAuthDTO,
-    user_dao: UserDAODep
+    response: Response, login_user_data: RequestUserAuthDTO, user_dao: UserDAODep
 ) -> ResponseDataUserLoginDTO | None:
     """Authenticate user and set access token cookie.
 
@@ -167,8 +164,9 @@ async def update_me(
         )
 
     if update_data:
-        await user_dao.update(filter_by={"id": current_user.id}, **update_data)
-        updated_user: User | None = await user_dao.find_one_or_none(id=current_user.id)
+        updated_user: User | None = await user_dao.update(
+            filter_by={"id": current_user.id}, **update_data
+        )
 
         if not updated_user:
             raise HTTPException(
@@ -183,8 +181,7 @@ async def update_me(
 
 @router.patch("/me/disable")
 async def disable_me(
-    current_user: CurrentUserDep,
-    user_dao: UserDAODep
+    current_user: CurrentUserDep, user_dao: UserDAODep
 ) -> ResponseMessageDTO:
     """Disable current user's account.
 
@@ -195,6 +192,6 @@ async def disable_me(
     Returns:
         ResponseMessageDTO: Confirmation message.
     """
-    await user_dao.update(filter_by={"id": current_user.id}, is_active=False)
-    message: dict[str, str] = {FieldNames.MESSAGE_FIELD: "User is disabled"}
+    disabled_user: User | None = await user_dao.update(filter_by={"id": current_user.id}, is_active=False)
+    message: dict[str, str] = {FieldNames.MESSAGE_FIELD: f"User {disabled_user.name} is disabled"}
     return ResponseMessageDTO.model_validate(message)

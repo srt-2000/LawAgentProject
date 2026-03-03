@@ -7,7 +7,7 @@ for all database models.
 
 from typing import TypeVar, Generic, Type, ClassVar, cast
 
-from sqlalchemy import update, delete
+from sqlalchemy import delete, select, Select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result, CursorResult
 
@@ -43,14 +43,16 @@ class BaseDAO(Generic[T]):
         Raises:
             SQLAlchemyError: If database operation fails.
         """
-        async with self._async_session.begin():
-            new_instance = self.__class__.model(**kwargs)
-            self._async_session.add(new_instance)
-            await self._async_session.flush()
 
-            return cast(T, new_instance)
+        new_instance: BaseSQLModel = self.__class__.model(**kwargs)
+        self._async_session.add(new_instance)
+        await self._async_session.flush()
 
-    async def update(self, filter_by: dict[str, str | int | bool], **kwargs) -> int:
+        return cast(T, new_instance)
+
+    async def update(
+        self, filter_by: dict[str, str | int | bool], **kwargs
+    ) -> T | None:
         """Update records matching the filter criteria.
 
         Args:
@@ -64,23 +66,23 @@ class BaseDAO(Generic[T]):
             SQLAlchemyError: If database operation fails.
         """
 
-        async with self._async_session.begin():
-            query = (
-                update(self.__class__.model)
-                .where(
-                    *[
-                        getattr(self.__class__.model, k) == v
-                        for k, v in filter_by.items()
-                    ]
-                )
-                .values(**kwargs)
-                .execution_options(synchronize_session="fetch")
-            )
-            result: Result[tuple[T]] = await self._async_session.execute(query)
-            cursor_result: CursorResult[tuple[T]] = cast(CursorResult[tuple[T]], result)
+        selected_objects: Select[tuple[BaseSQLModel]] = select(
+            self.__class__.model
+        ).where(*[getattr(self.__class__.model, k) == v for k, v in filter_by.items()])
 
-            rows_affected: int = int(getattr(cursor_result, "rowcount"))
-            return rows_affected
+        result: Result[tuple[T]] = await self._async_session.execute(selected_objects)
+        updated_object: T | None = result.scalar_one_or_none()
+
+        if updated_object is None:
+            return None
+
+        for key, value in kwargs.items():
+            setattr(updated_object, key, value)
+
+        await self._async_session.flush()
+        await self._async_session.refresh(updated_object)
+
+        return cast(T, updated_object)
 
     async def delete(self, filter_by: dict[str, str | int | bool]) -> int:
         """Delete records matching the filter criteria.
@@ -94,11 +96,10 @@ class BaseDAO(Generic[T]):
         Raises:
             SQLAlchemyError: If database operation fails.
         """
-        # async with async_session_maker() as async_session:
-        async with self._async_session.begin():
-            query = delete(self.__class__.model).filter_by(**filter_by)
-            result: Result[tuple[T]] = await self._async_session.execute(query)
-            cursor_result: CursorResult[tuple[T]] = cast(CursorResult[tuple[T]], result)
 
-            rows_affected: int = int(getattr(cursor_result, "rowcount"))
-            return rows_affected
+        query = delete(self.__class__.model).filter_by(**filter_by)
+        result: Result[tuple[T]] = await self._async_session.execute(query)
+        cursor_result: CursorResult[tuple[T]] = cast(CursorResult[tuple[T]], result)
+
+        rows_affected: int = int(getattr(cursor_result, "rowcount"))
+        return rows_affected
