@@ -1,18 +1,18 @@
 """
-Dependency schemas.
+Schemas used by auth dependencies.
 
-This module defines schemas used by FastAPI dependencies.
+Decoded JWT payload shape for get_current_user and WebSocket auth.
 """
 
 from pydantic import BaseModel
 
 
 class ResponsePayloadDTO(BaseModel):
-    """JWT token payload schema.
+    """Decoded JWT payload after verification.
 
     Attributes:
-        sub: Subject (user ID).
-        exp: Expiration timestamp.
+        sub: Subject (user ID as string).
+        exp: Expiration time (Unix timestamp); None if not present.
     """
 
     sub: str

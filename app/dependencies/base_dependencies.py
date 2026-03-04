@@ -1,8 +1,7 @@
 """
-Base dependencies for authentication.
+Shared auth logic for HTTP and WebSocket.
 
-This module provides core authentication dependencies for decoding
-tokens and retrieving active users.
+Decode JWT from cookie, validate expiry, and load the current active user from DB.
 """
 
 from datetime import datetime, timezone
@@ -13,10 +12,11 @@ from fastapi import HTTPException, status
 from jwt import DecodeError, ExpiredSignatureError
 
 from app.config import settings
-from app.dao.users_dao import UserDAO
+from app.dependencies.dao_dependencies import UserDAODep
+from app.models.models import User
 from app.schemas.config_schema import AuthConfigDTO
 from app.schemas.dependencies_schema import ResponsePayloadDTO
-from app.schemas.users_schema import ResponseUserDTO, DBUserDTO
+from app.schemas.users_schema import ResponseUserDTO
 
 
 async def decode_token(token: str) -> ResponsePayloadDTO:
@@ -59,11 +59,15 @@ async def decode_token(token: str) -> ResponsePayloadDTO:
     return valid_payload
 
 
-async def get_current_active_user(payload: ResponsePayloadDTO) -> ResponseUserDTO:
+async def get_current_active_user(
+    payload: ResponsePayloadDTO,
+    user_dao: UserDAODep
+) -> ResponseUserDTO:
     """Get current active user from token payload.
 
     Args:
         payload: Decoded token payload containing user ID.
+        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseUserDTO: Current authenticated user data.
@@ -78,7 +82,7 @@ async def get_current_active_user(payload: ResponsePayloadDTO) -> ResponseUserDT
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
-    user: DBUserDTO | None = await UserDAO.find_one_or_none(id=int(user_id))
+    user: User | None = await user_dao.find_one_or_none(id=int(user_id))
 
     if not user:
         raise HTTPException(
@@ -90,4 +94,4 @@ async def get_current_active_user(payload: ResponsePayloadDTO) -> ResponseUserDT
             status_code=status.HTTP_403_FORBIDDEN, detail="User is disabled"
         )
 
-    return ResponseUserDTO.model_validate(user.model_dump(exclude={"password_hash"}))
+    return ResponseUserDTO.model_validate(user)

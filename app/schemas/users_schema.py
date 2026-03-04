@@ -8,7 +8,7 @@ from typing import Self
 
 from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
 
-from app.schemas.chats_schema import ChatOut
+from app.schemas.chats_schema import ChatWithMessagesDTO
 from app.models.models import Role
 
 
@@ -23,14 +23,14 @@ class RequestUserRegistrationDTO(BaseModel):
     """
 
     name: str = Field(
-        ..., min_length=2, max_length=50, description="Name, from 3 to 50 symbols"
+        ..., min_length=2, max_length=50, description="Display name, 2 to 50 characters"
     )
     email: EmailStr = Field(..., description="Email", examples=["user@example.com"])
     password: str = Field(
-        ..., min_length=6, max_length=50, description="Password, from 6 tp 50 symbols"
+        ..., min_length=6, max_length=50, description="Password, 6 to 50 characters"
     )
     password_confirm: str = Field(
-        ..., min_length=6, max_length=50, description="Password confirmation"
+        ..., min_length=6, max_length=50, description="Must match password"
     )
 
     @model_validator(mode="after")
@@ -58,7 +58,7 @@ class RequestUserAuthDTO(BaseModel):
 
     email: EmailStr = Field(..., description="Email", examples=["user@example.com"])
     password: str = Field(
-        ..., min_length=6, max_length=50, description="Password, from 6 tp 50 symbols"
+        ..., min_length=6, max_length=50, description="Password, 6 to 50 characters"
     )
 
 
@@ -112,7 +112,7 @@ class ResponseUserDTO(BaseModel):
     email: EmailStr
     role: Role
     is_active: bool
-    chats: list[ChatOut] | None = None
+    chats: list[ChatWithMessagesDTO] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,7 +136,7 @@ class DBUserDTO(BaseModel):
     password_hash: str
     role: Role
     is_active: bool
-    chats: list[ChatOut] | None = None
+    chats: list[ChatWithMessagesDTO] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

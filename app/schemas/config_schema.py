@@ -1,18 +1,18 @@
 """
-Configuration data transfer objects.
+Configuration DTOs used by settings.
 
-This module defines schemas for application configuration data.
+Holds validated config values (e.g. JWT secret and algorithm) for use in auth code.
 """
 
 from pydantic import BaseModel
 
 
 class AuthConfigDTO(BaseModel):
-    """Authentication configuration data.
+    """JWT signing parameters passed from AuthSettings into token encode/decode.
 
     Attributes:
-        secret_key: JWT secret key.
-        algorithm: JWT encoding algorithm.
+        secret_key: Secret used to sign and verify tokens.
+        algorithm: Algorithm name (e.g. HS256).
     """
 
     secret_key: str

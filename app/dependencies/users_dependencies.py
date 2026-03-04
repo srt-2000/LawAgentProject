@@ -1,8 +1,5 @@
 """
-HTTP request authentication dependencies.
-
-This module provides dependencies for authenticating standard HTTP requests
-using cookies.
+HTTP auth dependency: read JWT from request cookies and resolve to current user.
 """
 
 from typing import Annotated
@@ -10,6 +7,7 @@ from typing import Annotated
 from fastapi import HTTPException, Request, status, Depends
 
 from app.dependencies.base_dependencies import decode_token, get_current_active_user
+from app.dependencies.dao_dependencies import UserDAODep
 from app.schemas.dependencies_schema import ResponsePayloadDTO
 from app.schemas.users_schema import ResponseUserDTO
 
@@ -36,18 +34,20 @@ def extract_token(request: Request) -> str:
 
 
 async def get_request_current_active_user(
-    token: str = Depends(extract_token),
+    user_dao: UserDAODep,
+    token: str = Depends(extract_token)
 ) -> ResponseUserDTO:
     """Get current active user from HTTP request token.
 
     Args:
+        user_dao: UserDAO Dependency,
         token: JWT token from request cookies.
 
     Returns:
         ResponseUserDTO: Authenticated user data.
     """
     payload: ResponsePayloadDTO = await decode_token(token)
-    return await get_current_active_user(payload)
+    return await get_current_active_user(payload, user_dao)
 
 
 CurrentUserDep = Annotated[ResponseUserDTO, Depends(get_request_current_active_user)]
