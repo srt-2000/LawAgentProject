@@ -19,8 +19,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
+sys.path.insert(0, dirname(dirname(abspath(__file__))))
+
 from app.database import DATABASE_URL, BaseSQLModel
-import app.models.models  # noqa: F401
 
 # This is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -68,10 +69,10 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    """Run migrations inside the given database connection.
+    """Configure context and run migrations with the given connection.
 
     Args:
-        connection: SQLAlchemy connection to use for migration statements.
+        connection: SQLAlchemy connection to use for migrations.
     """
     context.configure(connection=connection, target_metadata=target_metadata)
 
@@ -80,7 +81,10 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    """Run migrations using an async engine and a single connection."""
+    """Run migrations in async mode.
+
+    Creates an async engine and runs migrations with an async connection.
+    """
 
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),

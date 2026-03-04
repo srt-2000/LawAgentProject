@@ -1,5 +1,7 @@
 """
-HTML page routes: landing (/) and profile (/profile). Profile requires auth.
+Page rendering router.
+
+This module handles HTTP requests for rendering HTML pages.
 """
 
 from fastapi.responses import HTMLResponse

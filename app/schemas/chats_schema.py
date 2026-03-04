@@ -1,25 +1,20 @@
 """
-Chat and message DTOs for API and WebSocket.
+Chat and message data transfer objects.
 
-Pydantic models for listing chats, opening a chat with messages,
-and representing a single message in a chat.
+This module defines Pydantic schemas for chat and message responses.
 """
 
-from datetime import datetime
-
-from pydantic import ConfigDict, BaseModel, field_validator
-
-from app.api.api_constants import StandardMessages
+from pydantic import ConfigDict, BaseModel
 
 
-class MessageDTO(BaseModel):
-    """Single message in a chat (from DB: id, content, chat_id, is_bot).
+class MessageOut(BaseModel):
+    """Message response schema.
 
     Attributes:
-        id: Message primary key.
-        context: Message text.
-        chat_id: Parent chat ID.
-        is_bot: True if from agent, False if from user.
+        id: Message ID.
+        context: Message content.
+        chat_id: Associated chat ID.
+        is_bot: Whether message is from bot.
     """
 
     id: int
@@ -30,65 +25,19 @@ class MessageDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ChatBaseDTO(BaseModel):
-    """Shared chat fields: id, title, owner, created_at. Title default from settings if None.
+class ChatOut(BaseModel):
+    """Chat response schema.
 
     Attributes:
-        id: Chat primary key.
-        title: Display title; None is replaced by WELCOME_MESSAGE in validator.
-        user_id: Owner (user) ID.
-        created_at: When the chat was created.
+        id: Chat ID.
+        title: Chat title.
+        user_id: Associated user ID.
+        messages: List of messages in chat.
     """
 
     id: int
-    title: str | None
+    title: str
     user_id: int
-    created_at: datetime
+    messages: list[MessageOut] | None = None
 
     model_config = ConfigDict(from_attributes=True)
-
-    @field_validator("title", mode="before")
-    @classmethod
-    def title_none_default_validator(cls, title: str | None) -> str:
-        """Use WELCOME_MESSAGE when title is None so the client always gets a string.
-
-        Args:
-            title: Raw title from DB or payload.
-
-        Returns:
-            str: title if set, else settings.WELCOME_MESSAGE.
-        """
-        if title is None:
-            return StandardMessages.WELCOME_MESSAGE
-        else:
-            return title
-
-
-class ChatWithMessagesDTO(ChatBaseDTO):
-    """Chat plus its messages. Used when opening a chat or creating a new one.
-
-    Attributes:
-        messages: Ordered list of messages; None or [] when not loaded or new chat.
-    """
-
-    messages: list[MessageDTO] | None = None
-
-
-class ChatListSideBarItemDTO(ChatBaseDTO):
-    """One chat in the sidebar: base fields plus updated_at for sorting/display.
-
-    Attributes:
-        updated_at: Last update time (e.g. last message or edit).
-    """
-
-    updated_at: datetime
-
-
-class ChatListDTO(BaseModel):
-    """Response body for GET /user/chats: list of chats for the sidebar.
-
-    Attributes:
-        chat_list: Chats owned by the user (id, title, user_id, created_at, updated_at).
-    """
-
-    chat_list: list[ChatListSideBarItemDTO] = []

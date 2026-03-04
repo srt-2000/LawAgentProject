@@ -15,13 +15,13 @@ from app.schemas.config_schema import AuthConfigDTO
 
 
 class BaseAppSettings(BaseSettings):
-    """Base for all settings classes. Loads from .env and ignores extra keys."""
+    """Base settings class with common configuration."""
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 class DatabaseSettings(BaseAppSettings):
-    """Database connection settings (host, port, name, credentials)."""
+    """Database connection settings."""
 
     DB_HOST: str
     DB_PORT: int
@@ -49,10 +49,10 @@ class DatabaseSettings(BaseAppSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     def db_url(self) -> str:
-        """Build async PostgreSQL connection URL from environment settings.
+        """Construct database connection URL from settings.
 
         Returns:
-            str: Async connection URL for SQLAlchemy (postgresql+asyncpg).
+            str: PostgreSQL async connection URL.
         """
         return (
             f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@"
@@ -61,7 +61,7 @@ class DatabaseSettings(BaseAppSettings):
 
 
 class AuthSettings(BaseAppSettings):
-    """Authentication settings: JWT secret, algorithm, and bcrypt rounds."""
+    """Authentication settings."""
 
     SECRET_KEY: str
     ALGORITHM: Literal["HS256", "HS384", "HS512"]
@@ -121,6 +121,7 @@ class Settings(BaseAppSettings):
 
     database: DatabaseSettings
     auth: AuthSettings
+    WELCOME_MESSAGE: str = "Hello! How can I help you?"
 
 
 def get_settings() -> Settings:

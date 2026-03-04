@@ -1,13 +1,13 @@
 """
-User auth and profile: register, login (sets cookie), logout, me, update, disable.
+User authentication and management router.
+
+This module handles user registration, login, logout, and profile management.
 """
 
 from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
-from app.api.api_constants import FieldNames
-from app.dependencies.dao_dependencies import UserDAODep
-from app.models.models import User
+from app.dao.users_dao import UserDAO
 from app.schemas.users_schema import (
     RequestUserRegistrationDTO,
     RequestUserAuthDTO,
@@ -15,6 +15,7 @@ from app.schemas.users_schema import (
     RequestUserUpdateDTO,
     ResponseMessageDTO,
     ResponseDataUserLoginDTO,
+    DBUserDTO,
 )
 from app.services.users_services import AuthService
 from app.dependencies.users_dependencies import CurrentUserDep
@@ -24,13 +25,12 @@ router = APIRouter(prefix="/user", tags=["User"])
 
 @router.post("/register")
 async def register_user(
-    new_user_data: RequestUserRegistrationDTO, user_dao: UserDAODep
-) -> ResponseMessageDTO:
+    new_user_data: RequestUserRegistrationDTO,
+) -> ResponseMessageDTO | None:
     """Register a new user.
 
     Args:
         new_user_data: User registration data.
-        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseMessageDTO: Success message with username.
@@ -38,35 +38,34 @@ async def register_user(
     Raises:
         HTTPException: If user with email already exists.
     """
-    check_user: User | None = await user_dao.find_one_or_none(email=new_user_data.email)
+    check_user: DBUserDTO | None = await UserDAO.find_one_or_none(
+        email=new_user_data.email
+    )
 
     if check_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="User is already exist"
         )
     new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
-        exclude={FieldNames.PASSWORD_CONFIRM}
+        exclude={"password_confirm"}
     )
-    new_user_data_to_add[FieldNames.PASSWORD_HASH] = AuthService.get_password_hash(
-        new_user_data_to_add.pop(FieldNames.PASSWORD)
+    new_user_data_to_add["password_hash"] = AuthService.get_password_hash(
+        new_user_data_to_add.pop("password")
     )
-    await user_dao.add(**new_user_data_to_add)
-    message: dict[str, str] = {
-        FieldNames.MESSAGE_FIELD: f"User {new_user_data.name} registered successfully"
-    }
+    await UserDAO.add(**new_user_data_to_add)
+    message = {"message": f"User {new_user_data.name} registered successfully"}
     return ResponseMessageDTO.model_validate(message)
 
 
 @router.post("/login")
 async def login_user(
-    response: Response, login_user_data: RequestUserAuthDTO, user_dao: UserDAODep
+    response: Response, login_user_data: RequestUserAuthDTO
 ) -> ResponseDataUserLoginDTO | None:
     """Authenticate user and set access token cookie.
 
     Args:
         response: FastAPI response object to set cookies.
         login_user_data: User login credentials.
-        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseDataUserLoginDTO: Login response with tokens.
@@ -75,9 +74,7 @@ async def login_user(
         HTTPException: If credentials are invalid.
     """
     check_user: ResponseUserDTO | None = await AuthService.authenticate_user(
-        email=login_user_data.email,
-        password=login_user_data.password,
-        user_dao=user_dao,
+        email=login_user_data.email, password=login_user_data.password
     )
 
     if check_user is None:
@@ -97,10 +94,10 @@ async def login_user(
         path="/",
     )
     response_data = {
-        FieldNames.OK: True,
-        FieldNames.ACCESS_TOKEN: access_token,
-        FieldNames.REFRESH_TOKEN: None,
-        FieldNames.MESSAGE_FIELD: "Authorisation successful",
+        "ok": True,
+        "access_token": access_token,
+        "refresh_token": None,
+        "message": "Authorisation successful",
     }
     return ResponseDataUserLoginDTO.model_validate(response_data)
 
@@ -116,7 +113,7 @@ async def logout_user(response: Response) -> ResponseMessageDTO:
         ResponseMessageDTO: Logout confirmation message.
     """
     response.delete_cookie(key="users_access_token")
-    message = {FieldNames.MESSAGE_FIELD: "User is logout"}
+    message = {"message": "User is logout"}
     return ResponseMessageDTO.model_validate(message)
 
 
@@ -133,18 +130,15 @@ async def get_me(current_user: CurrentUserDep) -> ResponseUserDTO:
     return ResponseUserDTO.model_validate(current_user)
 
 
-@router.patch("/me", response_model=ResponseUserDTO)
+@router.patch("/me/update", response_model=ResponseUserDTO)
 async def update_me(
-    update_user: RequestUserUpdateDTO,
-    current_user: CurrentUserDep,
-    user_dao: UserDAODep,
+    update_user: RequestUserUpdateDTO, current_user: CurrentUserDep
 ) -> ResponseUserDTO:
     """Update current user's profile information.
 
     Args:
         update_user: Fields to update.
         current_user: Authenticated current user.
-        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseUserDTO: Updated user data.
@@ -153,37 +147,43 @@ async def update_me(
         HTTPException: If user not found after update.
     """
     update_data: dict[str, str | EmailStr] = update_user.model_dump(
-        exclude_none=True, exclude={FieldNames.PASSWORD_CONFIRM}
+        exclude_none=True, exclude={"password_confirm"}
     )
 
-    if FieldNames.PASSWORD in update_data:
-        update_data[FieldNames.PASSWORD_HASH] = AuthService.get_password_hash(
-            update_data.pop(FieldNames.PASSWORD)
+    if "password" in update_data:
+        update_data["password_hash"] = AuthService.get_password_hash(
+            update_data.pop("password")
         )
 
     if update_data:
-        updated_user: User = await user_dao.update(
-            filter_by={"id": current_user.id}, **update_data
+        await UserDAO.update(filter_by={"id": current_user.id}, **update_data)
+        updated_user: DBUserDTO | None = await UserDAO.find_one_or_none(
+            id=current_user.id
         )
 
-        return ResponseUserDTO.model_validate(updated_user)
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found after update",
+            )
+
+        return ResponseUserDTO.model_validate(
+            updated_user.model_dump(exclude={"password_hash"})
+        )
 
     return ResponseUserDTO.model_validate(current_user)
 
 
 @router.patch("/me/disable")
-async def disable_me(
-    current_user: CurrentUserDep, user_dao: UserDAODep
-) -> ResponseMessageDTO:
+async def disable_me(current_user: CurrentUserDep) -> ResponseMessageDTO:
     """Disable current user's account.
 
     Args:
         current_user: Authenticated current user.
-        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseMessageDTO: Confirmation message.
     """
-    disabled_user: User = await user_dao.update(filter_by={"id": current_user.id}, is_active=False)
-    message: dict[str, str] = {FieldNames.MESSAGE_FIELD: f"User {disabled_user.name} is disabled"}
+    await UserDAO.update(filter_by={"id": current_user.id}, is_active=False)
+    message = {"message": "User is disabled"}
     return ResponseMessageDTO.model_validate(message)

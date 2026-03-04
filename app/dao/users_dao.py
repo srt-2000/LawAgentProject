@@ -10,7 +10,9 @@ from sqlalchemy.sql import Select
 from sqlalchemy.engine import Result
 
 from app.dao.base_dao import BaseDAO
-from app.models.models import User, Chat
+from app.database import async_session_maker
+from app.models.models import User
+from app.schemas.users_schema import DBUserDTO
 
 
 class UserDAO(BaseDAO[User]):
@@ -18,26 +20,26 @@ class UserDAO(BaseDAO[User]):
 
     model = User
 
-    async def find_one_or_none(self, **kwargs) -> User | None:
+    @classmethod
+    async def find_one_or_none(cls, **kwargs) -> DBUserDTO | None:
         """Find a single user by filter criteria with related chats.
 
         Args:
             **kwargs: Filter criteria as field-value pairs.
 
         Returns:
-            User | None: User instance if found, None otherwise.
+            DBUserDTO | None: User DTO if found, None otherwise.
         """
-        query: Select[tuple[User]] = (
-            select(self.__class__.model)
-            .options(
-                selectinload(self.__class__.model.chats).selectinload(Chat.messages)
+        async with async_session_maker() as async_session:
+            query: Select[tuple[User]] = (
+                select(cls.model)
+                .options(selectinload(cls.model.chats))
+                .filter_by(**kwargs)
             )
-            .filter_by(**kwargs)
-        )
-        result: Result[tuple[User]] = await self._async_session.execute(query)
-        user: User | None = result.scalar_one_or_none()
+            result: Result[tuple[User]] = await async_session.execute(query)
+            user: User | None = result.scalar_one_or_none()
 
-        if not user:
-            return None
+            if not user:
+                return None
 
-        return user
+            return DBUserDTO.model_validate(user)

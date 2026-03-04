@@ -1,5 +1,8 @@
 """
-WebSocket auth: read JWT from handshake cookies and resolve to current user.
+WebSocket-specific authentication dependencies.
+
+This module provides dependencies for authenticating WebSocket connections
+using cookies.
 """
 
 from typing import Annotated
@@ -9,22 +12,21 @@ from fastapi.params import Depends
 from starlette import status
 
 from app.dependencies.base_dependencies import decode_token, get_current_active_user
-from app.dependencies.dao_dependencies import UserDAODep
 from app.schemas.dependencies_schema import ResponsePayloadDTO
 from app.schemas.users_schema import ResponseUserDTO
 
 
 def get_token_from_websocket(storage: WebSocket) -> str:
-    """Extract JWT from the WebSocket handshake cookies.
+    """Extract authentication token from WebSocket cookies.
 
     Args:
-        storage: WebSocket connection (cookies are taken from the handshake).
+        storage: WebSocket connection instance.
 
     Returns:
-        str: JWT access token string.
+        str: JWT access token.
 
     Raises:
-        HTTPException: 401 if cookie "users_access_token" is missing.
+        HTTPException: If token not found in cookies.
     """
     current_token: str | None = storage.cookies.get("users_access_token")
 
@@ -38,21 +40,17 @@ def get_token_from_websocket(storage: WebSocket) -> str:
 WebsocketToken = Annotated[str, Depends(get_token_from_websocket)]
 
 
-async def get_websocket_current_active_user(
-    token: WebsocketToken,
-    user_dao: UserDAODep
-) -> ResponseUserDTO:
+async def get_websocket_current_active_user(token: WebsocketToken) -> ResponseUserDTO:
     """Get current active user from WebSocket token.
 
     Args:
         token: JWT token from WebSocket cookies.
-        user_dao: UserDAO Dependency.
 
     Returns:
         ResponseUserDTO: Authenticated user data.
     """
     payload: ResponsePayloadDTO = await decode_token(token)
-    return await get_current_active_user(payload, user_dao)
+    return await get_current_active_user(payload)
 
 
 WebsocketCurrentUserDep = Annotated[
