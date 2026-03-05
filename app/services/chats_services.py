@@ -62,6 +62,7 @@ class CurrentChatService:
 
         Args:
             current_user_id: Authenticated user's ID.
+            chat_dao: ChatDAO dependency.
         """
         self.user_id: int = current_user_id
         self.chat_dao = chat_dao
@@ -94,7 +95,6 @@ class CurrentChatService:
 
         Args:
             current_chat_id: Chat ID to load.
-            chat_dao: ChatDAO dependency.
         Returns:
             ChatWithMessagesDTO if found and owned by user, None otherwise.
         """

@@ -6,6 +6,7 @@ Incoming messages are treated as user messages (is_bot=False); outgoing are set 
 """
 
 from fastapi import WebSocket
+from fastapi.websockets import WebSocketDisconnect
 
 from app.dependencies.dao_dependencies import MessageDAODep
 from app.schemas.messages_schema import WebSocketMessageDTO
@@ -31,6 +32,8 @@ class WSMessageServiceMixin:
         try:
             serialized_message = message.model_dump()
             await socket.send_json(serialized_message)
+        except WebSocketDisconnect:
+            raise
         except Exception as error:
             print(f"Unexpected error sending message: {error}")
             return
@@ -70,6 +73,8 @@ class WSMessageServiceMixin:
 
         try:
             message: dict[str, str] = await socket.receive_json()
+        except WebSocketDisconnect:
+            raise
         except Exception as error:
             print(f"Unexpected error during receive message: {error}")
             return error_message
