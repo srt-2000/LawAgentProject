@@ -9,7 +9,7 @@ from datetime import datetime
 
 from pydantic import ConfigDict, BaseModel, field_validator
 
-from app.api.api_constants import StandardMessages
+from app.api.api_constants import RouterStandardMessages
 
 
 class MessageDTO(BaseModel):
@@ -59,7 +59,7 @@ class ChatBaseDTO(BaseModel):
             str: title if set, else settings.WELCOME_MESSAGE.
         """
         if title is None:
-            return StandardMessages.WELCOME_MESSAGE
+            return RouterStandardMessages.WELCOME_MESSAGE
         else:
             return title
 

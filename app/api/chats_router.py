@@ -65,7 +65,7 @@ async def create_new_chat(current_user: CurrentUserDep) -> ChatWithMessagesDTO:
         ChatWithMessagesDTO: New chat (id, title, user_id, created_at, messages=[]).
     """
     chat_service: CurrentChatService = CurrentChatService(current_user.id)
-    new_chat: ChatWithMessagesDTO = await chat_service.create_new_chat()
+    new_chat: ChatWithMessagesDTO = await chat_service.create_new_chat(chat_dao)
 
     return new_chat
 
@@ -90,7 +90,7 @@ async def get_chat_by_id(
         HTTPException: 404 if chat not found or not owned by user.
     """
     chat_service: CurrentChatService = CurrentChatService(current_user.id)
-    chat: ChatWithMessagesDTO | None = await chat_service.get_chat_with_id(chat_id)
+    chat: ChatWithMessagesDTO | None = await chat_service.get_chat_with_id(chat_id, chat_dao)
 
     if chat is None:
         raise HTTPException(status_code=404, detail="Chat not found")

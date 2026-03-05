@@ -7,10 +7,11 @@ chat lifecycle: create new chat, load existing chat by ID for the current user.
 
 from fastapi import WebSocket
 
-from app.dao.chats_dao import ChatDAO
+from app.dependencies.dao_dependencies import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats_schema import ChatWithMessagesDTO
 from app.services.message_services import WSMessageServiceMixin
+from app.services.services_constants import ServiceFieldNames
 
 
 class WSConnectionManager(WSMessageServiceMixin):
@@ -52,13 +53,18 @@ class WSConnectionManager(WSMessageServiceMixin):
 class CurrentChatService:
     """Creates and loads chats for the current user (used by WebSocket and HTTP)."""
 
-    def __init__(self, current_user_id: int) -> None:
+    def __init__(
+            self,
+            current_user_id: int,
+            chat_dao: ChatDAODep
+    ) -> None:
         """Store the user ID for all operations.
 
         Args:
             current_user_id: Authenticated user's ID.
         """
         self.user_id: int = current_user_id
+        self.chat_dao = chat_dao
 
     async def create_new_chat(self) -> ChatWithMessagesDTO:
         """Create a new chat for the current user. Returns DTO with empty messages.
@@ -67,10 +73,10 @@ class CurrentChatService:
             ChatWithMessagesDTO: New chat with id, title, user_id, created_at, messages=[].
         """
         data_to_create_new_chat: dict[str, str | int] = {
-            "title": f"new_chat of {self.user_id}",
-            "user_id": self.user_id,
+            ServiceFieldNames.TITLE: f"new_chat of {self.user_id}",
+            ServiceFieldNames.USER_ID: self.user_id,
         }
-        new_chat: Chat = await ChatDAO.add(**data_to_create_new_chat)
+        new_chat: Chat = await self.chat_dao.add(**data_to_create_new_chat)
 
         return ChatWithMessagesDTO(
             id=new_chat.id,
@@ -81,17 +87,18 @@ class CurrentChatService:
         )
 
     async def get_chat_with_id(
-        self, current_chat_id: int
+        self,
+        current_chat_id: int
     ) -> ChatWithMessagesDTO | None:
         """Load a chat by ID if it belongs to the current user.
 
         Args:
             current_chat_id: Chat ID to load.
-
+            chat_dao: ChatDAO dependency.
         Returns:
             ChatWithMessagesDTO if found and owned by user, None otherwise.
         """
-        chat: Chat | None = await ChatDAO.find_one_or_none_by_id(
+        chat: Chat | None = await self.chat_dao.find_one_or_none_by_id(
             id=current_chat_id, user_id=self.user_id
         )
 
