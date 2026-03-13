@@ -9,7 +9,7 @@ from datetime import datetime
 
 from pydantic import ConfigDict, BaseModel, field_validator
 
-from app.api.api_constants import RouterStandardMessages
+from app.routers.constants import RouterStandardMessages
 
 
 class MessageDTO(BaseModel):

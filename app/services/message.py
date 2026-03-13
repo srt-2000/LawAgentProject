@@ -8,9 +8,9 @@ Incoming messages are treated as user messages (is_bot=False); outgoing are set 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
 
-from app.dependencies.dao_dependencies import MessageDAODep
-from app.schemas.messages_schema import WebSocketMessageDTO
-from app.services.services_constants import ServiceMessages
+from app.dependencies.dao import MessageDAODep
+from app.schemas.messages import WebSocketMessageDTO
+from app.services.services import ServiceMessages
 
 
 class WSMessageServiceMixin:

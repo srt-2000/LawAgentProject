@@ -5,10 +5,10 @@ User auth and profile: register, login (sets cookie), logout, me, update, disabl
 from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
-from app.api.api_constants import RouterFieldNames
-from app.dependencies.dao_dependencies import UserDAODep
+from app.routers.constants import RouterFieldNames, RouterStandardMessages
+from app.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.schemas.users_schema import (
+from app.schemas.users import (
     RequestUserRegistrationDTO,
     RequestUserAuthDTO,
     ResponseUserDTO,
@@ -16,8 +16,8 @@ from app.schemas.users_schema import (
     ResponseMessageDTO,
     ResponseDataUserLoginDTO,
 )
-from app.services.users_services import AuthService
-from app.dependencies.users_dependencies import CurrentUserDep
+from app.services.users import AuthService
+from app.dependencies.users import CurrentUserDep
 
 router = APIRouter(prefix="/user", tags=["User"])
 
@@ -100,7 +100,7 @@ async def login_user(
         RouterFieldNames.OK: True,
         RouterFieldNames.ACCESS_TOKEN: access_token,
         RouterFieldNames.REFRESH_TOKEN: None,
-        RouterFieldNames.MESSAGE_FIELD: "Authorisation successful",
+        RouterFieldNames.MESSAGE_FIELD: RouterStandardMessages.AUTH_SUCCESS,
     }
     return ResponseDataUserLoginDTO.model_validate(response_data)
 
@@ -116,7 +116,7 @@ async def logout_user(response: Response) -> ResponseMessageDTO:
         ResponseMessageDTO: Logout confirmation message.
     """
     response.delete_cookie(key="users_access_token")
-    message = {RouterFieldNames.MESSAGE_FIELD: "User is logout"}
+    message = {RouterFieldNames.MESSAGE_FIELD: RouterStandardMessages.LOGOUT_MESSAGE}
     return ResponseMessageDTO.model_validate(message)
 
 

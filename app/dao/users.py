@@ -9,7 +9,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.sql import Select
 from sqlalchemy.engine import Result
 
-from app.dao.base_dao import BaseDAO
+from app.dao.base import BaseDAO
 from app.models.models import User, Chat
 
 

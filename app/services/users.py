@@ -12,10 +12,10 @@ import jwt
 from fastapi import HTTPException, status
 from pydantic import EmailStr
 from app.config import settings
-from app.dependencies.dao_dependencies import UserDAODep
+from app.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.schemas.config_schema import AuthConfigDTO
-from app.schemas.users_schema import ResponseUserDTO
+from app.schemas.config import AuthConfigDTO
+from app.schemas.users import ResponseUserDTO
 
 
 class PasswordService:

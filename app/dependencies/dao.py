@@ -8,10 +8,10 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.dao.chats_dao import ChatDAO
-from app.dao.messages_dao import MessageDAO
-from app.dao.users_dao import UserDAO
-from app.dependencies.session_dependencies import SessionDep
+from app.dao.chats import ChatDAO
+from app.dao.messages import MessageDAO
+from app.dao.users import UserDAO
+from app.dependencies.session import SessionDep
 
 
 async def get_user_dao(session: SessionDep) -> UserDAO:

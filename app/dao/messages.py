@@ -4,7 +4,7 @@ Message data access.
 Uses BaseDAO add/update/delete for message records (create and delete only in practice).
 """
 
-from app.dao.base_dao import BaseDAO
+from app.dao.base import BaseDAO
 from app.models.models import Message
 
 

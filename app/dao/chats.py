@@ -7,7 +7,7 @@ Create, read, and delete chats; load one chat with messages or list user chats w
 from sqlalchemy import Select, select, Result, ScalarResult
 from sqlalchemy.orm import selectinload
 
-from app.dao.base_dao import BaseDAO
+from app.dao.base import BaseDAO
 from app.models.models import Chat
 
 

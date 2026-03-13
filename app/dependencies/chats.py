@@ -8,10 +8,10 @@ from fastapi import WebSocket, HTTPException
 from fastapi.params import Depends
 from starlette import status
 
-from app.dependencies.base_dependencies import decode_token, get_current_active_user
-from app.dependencies.dao_dependencies import UserDAODep
-from app.schemas.dependencies_schema import ResponsePayloadDTO
-from app.schemas.users_schema import ResponseUserDTO
+from app.dependencies.base import decode_token, get_current_active_user
+from app.dependencies.dao import UserDAODep
+from app.schemas.dependencies import ResponsePayloadDTO
+from app.schemas.users import ResponseUserDTO
 
 
 def get_token_from_websocket(storage: WebSocket) -> str:

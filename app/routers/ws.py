@@ -8,13 +8,13 @@ messages and responds with a stub until RAG is connected.
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from app.api.api_constants import RouterStandardMessages, RouterFieldNames
-from app.dependencies.chats_dependencies import WebsocketCurrentUserDep
-from app.dependencies.dao_dependencies import ChatDAODep, MessageDAODep
-from app.schemas.chats_schema import ChatWithMessagesDTO
-from app.schemas.messages_schema import WebSocketMessageDTO
-from app.services.chats_services import WSConnectionManager, CurrentChatService
-from app.services.services_constants import ServiceMessages
+from app.routers.constants import RouterStandardMessages, RouterFieldNames
+from app.dependencies.chats import WebsocketCurrentUserDep
+from app.dependencies.dao import ChatDAODep, MessageDAODep
+from app.schemas.chats import ChatWithMessagesDTO
+from app.schemas.messages import WebSocketMessageDTO
+from app.services.chats import WSConnectionManager, CurrentChatService
+from app.services.services import ServiceMessages
 
 router = APIRouter(prefix="/ws/chat")
 chat_connection_manager = WSConnectionManager()

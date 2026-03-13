@@ -12,11 +12,11 @@ from fastapi import HTTPException, status
 from jwt import DecodeError, ExpiredSignatureError
 
 from app.config import settings
-from app.dependencies.dao_dependencies import UserDAODep
+from app.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.schemas.config_schema import AuthConfigDTO
-from app.schemas.dependencies_schema import ResponsePayloadDTO
-from app.schemas.users_schema import ResponseUserDTO
+from app.schemas.config import AuthConfigDTO
+from app.schemas.dependencies import ResponsePayloadDTO
+from app.schemas.users import ResponseUserDTO
 
 
 async def decode_token(token: str) -> ResponsePayloadDTO:

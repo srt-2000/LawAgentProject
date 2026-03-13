@@ -11,7 +11,7 @@ from fastapi.exceptions import ValidationException
 from pydantic import field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.schemas.config_schema import AuthConfigDTO
+from app.schemas.config import AuthConfigDTO
 
 
 class BaseAppSettings(BaseSettings):

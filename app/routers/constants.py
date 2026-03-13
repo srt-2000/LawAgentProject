@@ -25,4 +25,6 @@ class RouterStandardMessages:
     INVALID_CHAT:str = "Invalid chat_id"
     CHAT_NOT_FOUND: str = "Chat not found"
     STUB_MESSAGE: str = "STUB test message sent/receive"
+    AUTH_SUCCESS: str = "Authorisation successful"
+    LOGOUT_MESSAGE: str = "User is logout"
 

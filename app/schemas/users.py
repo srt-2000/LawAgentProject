@@ -8,7 +8,7 @@ from typing import Self
 
 from pydantic import BaseModel, EmailStr, Field, model_validator, ConfigDict
 
-from app.schemas.chats_schema import ChatWithMessagesDTO
+from app.schemas.chats import ChatWithMessagesDTO
 from app.models.models import Role
 
 

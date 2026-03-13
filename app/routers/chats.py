@@ -6,21 +6,21 @@ All require the current user; chats are scoped to that user.
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import ScalarResult
 
-from app.dependencies.dao_dependencies import ChatDAODep
-from app.dependencies.users_dependencies import CurrentUserDep
+from app.dependencies.dao import ChatDAODep
+from app.dependencies.users import CurrentUserDep
 from app.models.models import Chat
-from app.schemas.chats_schema import (
+from app.schemas.chats import (
     ChatListDTO,
     ChatWithMessagesDTO,
     ChatListSideBarItemDTO,
 )
-from app.schemas.users_schema import ResponseMessageDTO
-from app.services.chats_services import CurrentChatService
+from app.schemas.users import ResponseMessageDTO
+from app.services.chats import CurrentChatService
 
-router = APIRouter(prefix="/chat", tags=["Chats"])
+router = APIRouter(prefix="/chats", tags=["Chats"])
 
 
-@router.get("/chats", response_model=ChatListDTO)
+@router.get("/", response_model=ChatListDTO)
 async def get_user_chats_list(
     current_user: CurrentUserDep,
     chat_dao: ChatDAODep
@@ -48,7 +48,7 @@ async def get_user_chats_list(
 
 
 @router.post("/")
-async def create_new_chat(
+async def create(
     current_user: CurrentUserDep,
     chat_dao: ChatDAODep
 ) -> ChatWithMessagesDTO:
