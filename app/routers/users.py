@@ -5,6 +5,7 @@ User auth and profile: register, login (sets cookie), logout, me, update, disabl
 from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
+from app.dao.exceptions import ObjectNotFoundException
 from app.routers.constants import RouterFieldNames, RouterStandardMessages
 from app.dependencies.dao import UserDAODep
 from app.models.models import User
@@ -162,9 +163,16 @@ async def update_me(
         )
 
     if update_data:
-        updated_user: User = await user_dao.update(
-            filter_by={"id": current_user.id}, **update_data
-        )
+
+        try:
+            updated_user: User = await user_dao.update(
+                filter_by={"id": current_user.id}, **update_data
+                )
+        except ObjectNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
 
         return ResponseUserDTO.model_validate(updated_user)
 

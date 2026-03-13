@@ -11,6 +11,7 @@ from sqlalchemy import delete, select, Select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result, CursorResult
 
+from app.dao.exceptions import ObjectNotFoundException
 from app.database import BaseSQLModel
 
 T = TypeVar("T", bound=BaseSQLModel)
@@ -70,9 +71,8 @@ class BaseDAO(Generic[T]):
         updated_object: T | None = result.scalar_one_or_none()
 
         if updated_object is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found after update",
+            raise ObjectNotFoundException(
+                self.__class__.model.__name__
             )
 
         for key, value in kwargs.items():
