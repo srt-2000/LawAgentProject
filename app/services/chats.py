@@ -11,7 +11,7 @@ from app.dependencies.dao import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDTO
 from app.services.message import WSMessageServiceMixin
-from app.services.services import ServiceFieldNames
+from app.services.constants import FieldNames
 
 
 class WSConnectionManager(WSMessageServiceMixin):
@@ -74,8 +74,8 @@ class CurrentChatService:
             ChatWithMessagesDTO: New chat with id, title, user_id, created_at, messages=[].
         """
         data_to_create_new_chat: dict[str, str | int] = {
-            ServiceFieldNames.TITLE: f"new_chat of {self.user_id}",
-            ServiceFieldNames.USER_ID: self.user_id,
+            FieldNames.TITLE: f"new_chat of {self.user_id}",
+            FieldNames.USER_ID: self.user_id,
         }
         new_chat: Chat = await self.chat_dao.add(**data_to_create_new_chat)
 

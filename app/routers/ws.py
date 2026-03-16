@@ -15,7 +15,7 @@ from app.dependencies.dao import ChatDAODep, MessageDAODep
 from app.schemas.chats import ChatWithMessagesDTO
 from app.schemas.messages import WebSocketMessageDTO
 from app.services.chats import WSConnectionManager, CurrentChatService
-from app.services.services import ServiceMessages
+from app.services.constants import StandardMessages
 
 router = APIRouter(prefix="/ws/chat")
 chat_connection_manager = WSConnectionManager()
@@ -71,10 +71,12 @@ async def websocket_chat(
         while True:
             message_to_receive: WebSocketMessageDTO = (
                 await chat_connection_manager.receive_message(
-                    socket, chat_id=current_chat.id, message_dao=message_dao
+                    socket,
+                    chat_id=current_chat.id,
+                    message_dao=message_dao
                 )
             )
-            if message_to_receive == ServiceMessages.WS_ERROR_MESSAGE:
+            if message_to_receive == StandardMessages.WS_ERROR_MESSAGE:
                 break
 
             agent_message: WebSocketMessageDTO = WebSocketMessageDTO(

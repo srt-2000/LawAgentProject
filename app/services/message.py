@@ -7,10 +7,11 @@ Incoming messages are treated as user messages (is_bot=False); outgoing are set 
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
+from loguru import logger
 
 from app.dependencies.dao import MessageDAODep
 from app.schemas.messages import WebSocketMessageDTO
-from app.services.services import ServiceMessages
+from app.services.constants import StandardMessages, FieldNames, FieldsValues
 
 
 class WSMessageServiceMixin:
@@ -35,15 +36,17 @@ class WSMessageServiceMixin:
         except WebSocketDisconnect:
             raise
         except Exception as error:
-            print(f"Unexpected error sending message: {error}")
+            logger.error(f"{StandardMessages.SEND_MESSAGE_ERROR} {error}")
             return
 
         try:
             await message_dao.add(
-                context=message.message, chat_id=message.chat_id, is_bot=message.is_bot
+                context=message.message,
+                chat_id=message.chat_id,
+                is_bot=message.is_bot
             )
         except Exception as error:
-            print(f"Unexpected error saving the sent message into db: {error}")
+            logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
             return
 
     @staticmethod
@@ -66,7 +69,7 @@ class WSMessageServiceMixin:
             WebSocketMessageDTO: Parsed message with chat_id and is_bot=False, or error DTO on failure.
         """
         error_message: WebSocketMessageDTO = WebSocketMessageDTO(
-            message=ServiceMessages.WS_ERROR_MESSAGE,
+            message=StandardMessages.WS_ERROR_MESSAGE,
             chat_id=chat_id,
             is_bot=False,
         )
@@ -76,18 +79,18 @@ class WSMessageServiceMixin:
         except WebSocketDisconnect:
             raise
         except Exception as error:
-            print(f"Unexpected error during receive message: {error}")
+            logger.error(f"{StandardMessages.SEND_MESSAGE_ERROR} {error}")
             return error_message
 
         try:
-            received_text: str | None = message.get("message")
+            received_text: str | None = message.get(FieldNames.MESSAGE)
             received_message: WebSocketMessageDTO = WebSocketMessageDTO(
-                message=received_text or "",
+                message=received_text or FieldsValues.EMPTY_STRING,
                 chat_id=chat_id,
                 is_bot=False,
             )
         except Exception as error:
-            print(f"Cant serialize received message: {error}")
+            logger.error(f"{StandardMessages.SERIALIZE_MESSAGE_ERROR} {error}")
             return error_message
 
         try:
@@ -97,7 +100,7 @@ class WSMessageServiceMixin:
                 is_bot=received_message.is_bot,
             )
         except Exception as error:
-            print(f"Unexpected error during saving received message to db: {error}")
+            logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
             return error_message
 
         return received_message

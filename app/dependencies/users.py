@@ -7,6 +7,7 @@ from typing import Annotated
 from fastapi import HTTPException, Request, status, Depends
 
 from app.dependencies.base import decode_token, get_current_active_user
+from app.dependencies.constants import DependencyMessages, FieldValues
 from app.dependencies.dao import UserDAODep
 from app.schemas.dependencies import ResponsePayloadDTO
 from app.schemas.users import ResponseUserDTO
@@ -24,11 +25,12 @@ def extract_token(request: Request) -> str:
     Raises:
         HTTPException: If token not found in cookies.
     """
-    current_token: str | None = request.cookies.get("users_access_token")
+    current_token: str | None = request.cookies.get(FieldValues.USERS_ACCESS_TOKEN)
 
     if not current_token:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=DependencyMessages.TOKEN_NOT_VALID
         )
     return current_token
 

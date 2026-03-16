@@ -6,12 +6,12 @@ Subclass with model = YourModel to get CRUD. Each method uses its own session an
 
 from typing import TypeVar, Generic, Type, ClassVar, cast
 
-from fastapi import HTTPException, status
-from sqlalchemy import delete, select, Select
+from sqlalchemy import delete, select, Select, Delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result, CursorResult
 
 from app.dao.exceptions import ObjectNotFoundException
+from app.dao.constants import DAOFieldNames
 from app.database import BaseSQLModel
 
 T = TypeVar("T", bound=BaseSQLModel)
@@ -96,9 +96,9 @@ class BaseDAO(Generic[T]):
             SQLAlchemyError: If database operation fails.
         """
 
-        query = delete(self.__class__.model).filter_by(**filter_by)
+        query: Delete = delete(self.__class__.model).filter_by(**filter_by)
         result: Result[tuple[T]] = await self._async_session.execute(query)
         cursor_result: CursorResult[tuple[T]] = cast(CursorResult[tuple[T]], result)
 
-        rows_affected: int = int(getattr(cursor_result, "rowcount"))
+        rows_affected: int = int(getattr(cursor_result, DAOFieldNames.ROWCOUNT))
         return rows_affected

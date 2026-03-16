@@ -9,6 +9,7 @@ from datetime import datetime
 
 from pydantic import ConfigDict, BaseModel, field_validator
 
+from app.schemas.constants import FieldNames, FieldValues
 from app.routers.constants import RouterStandardMessages
 
 
@@ -47,7 +48,10 @@ class ChatBaseDTO(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    @field_validator("title", mode="before")
+    @field_validator(
+        FieldNames.TITLE,
+        mode=FieldValues.BEFORE_MODE
+    )
     @classmethod
     def title_none_default_validator(cls, title: str | None) -> str:
         """Use WELCOME_MESSAGE when title is None so the client always gets a string.

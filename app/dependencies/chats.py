@@ -9,6 +9,7 @@ from fastapi.params import Depends
 from starlette import status
 
 from app.dependencies.base import decode_token, get_current_active_user
+from app.dependencies.constants import DependencyMessages, FieldValues
 from app.dependencies.dao import UserDAODep
 from app.schemas.dependencies import ResponsePayloadDTO
 from app.schemas.users import ResponseUserDTO
@@ -26,11 +27,12 @@ def get_token_from_websocket(storage: WebSocket) -> str:
     Raises:
         HTTPException: 401 if cookie "users_access_token" is missing.
     """
-    current_token: str | None = storage.cookies.get("users_access_token")
+    current_token: str | None = storage.cookies.get(FieldValues.USERS_ACCESS_TOKEN)
 
     if not current_token:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Token not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=DependencyMessages.TOKEN_NOT_VALID
         )
     return current_token
 
