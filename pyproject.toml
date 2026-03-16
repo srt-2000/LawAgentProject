@@ -18,6 +18,7 @@ dependencies = [
     "types-passlib>=1.7.7.20250602",
     "pytest>=9.0.2",
     "httpx>=0.28.1",
+    "loguru>=0.7.3",
 ]
 
 [tool.mypy]

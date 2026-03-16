@@ -7,11 +7,19 @@ using Pydantic Settings for validation and type safety.
 
 from typing import Literal
 
+from loguru import logger
 from fastapi.exceptions import ValidationException
 from pydantic import field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.schemas.config import AuthConfigDTO
+from app.constants import (
+    ConfigFieldNames,
+    EnvErrorsFieldNames,
+    ConfigMessages,
+    Values,
+    POSTGRESQL_ASYNCPG_LINK_BEGIN,
+)
 
 
 class BaseAppSettings(BaseSettings):
@@ -29,13 +37,13 @@ class DatabaseSettings(BaseAppSettings):
     DB_USER: str
     DB_PASSWORD: str
 
-    @field_validator("DB_PORT")
+    @field_validator(ConfigFieldNames.DB_PORT)
     @classmethod
-    def validate_port(cls, v: int) -> int:
+    def validate_port(cls, port_number: int) -> int:
         """Validate database port is in valid range.
 
         Args:
-            v: Port number to validate.
+            port_number: Port number to validate.
 
         Returns:
             int: Validated port number.
@@ -43,19 +51,20 @@ class DatabaseSettings(BaseAppSettings):
         Raises:
             ValueError: If port is not in valid range (1-65535).
         """
-        if not 1 <= v <= 65535:
-            raise ValueError("Port must be between 1 and 65535")
-        return v
+        if not Values.MIN_PORT_NUMBER <= port_number <= Values.MAX_PORT_NUMBER:
+            raise ValueError(ConfigMessages.PORT_NUMBER_VALUE_ERROR)
+        return port_number
 
     @computed_field  # type: ignore[prop-decorator]
     def db_url(self) -> str:
-        """Build async PostgreSQL connection URL from environment settings.
+        """Build async PostgresSQL connection URL from environment settings.
 
         Returns:
             str: Async connection URL for SQLAlchemy (postgresql+asyncpg).
         """
         return (
-            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@"
+            f"{POSTGRESQL_ASYNCPG_LINK_BEGIN}"
+            f"{self.DB_USER}:{self.DB_PASSWORD}@"
             f"{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
@@ -67,13 +76,13 @@ class AuthSettings(BaseAppSettings):
     ALGORITHM: Literal["HS256", "HS384", "HS512"]
     ROUNDS: int
 
-    @field_validator("ROUNDS")
+    @field_validator(ConfigFieldNames.CRYPT_ROUNDS)
     @classmethod
-    def validate_rounds(cls, v: int) -> int:
+    def validate_rounds(cls, rounds_number: int) -> int:
         """Validate bcrypt rounds are in valid range.
 
         Args:
-            v: BCrypt rounds to validate.
+            rounds_number: BCrypt rounds to validate.
 
         Returns:
             int: Validated rounds number.
@@ -81,17 +90,17 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If rounds are not in valid range (4-31).
         """
-        if not 4 <= v <= 31:
-            raise ValueError("BCrypt rounds must be between 4 and 31")
-        return v
+        if not Values.MIN_ROUNDS_NUMBER <= rounds_number <= Values.MAX_ROUNDS_NUMBER:
+            raise ValueError(ConfigMessages.CRYPT_ROUNDS_VALUE_ERROR)
+        return rounds_number
 
-    @field_validator("SECRET_KEY")
+    @field_validator(ConfigFieldNames.SECRET_KEY)
     @classmethod
-    def validate_secret_key(cls, v: str) -> str:
+    def validate_secret_key(cls, secret_key: str) -> str:
         """Validate secret key is not empty and has minimum length.
 
         Args:
-            v: Secret key to validate.
+            secret_key: Secret key to validate.
 
         Returns:
             str: Validated secret key.
@@ -99,9 +108,9 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If secret key is empty or too short (less than 32 characters).
         """
-        if not v or len(v) < 32:
-            raise ValueError("Secret key must be at least 32 characters long")
-        return v
+        if not secret_key or len(secret_key) < Values.MAX_SECRET_KEY_LEN:
+            raise ValueError(ConfigMessages.SECRET_KEY_VALUE_ERROR)
+        return secret_key
 
     @computed_field  # type: ignore[prop-decorator]
     def auth_config(self) -> AuthConfigDTO:
@@ -136,9 +145,16 @@ def get_settings() -> Settings:
         project_settings = Settings(database=DatabaseSettings(), auth=AuthSettings())
     except ValidationException as er:
         for env_error in er.errors():
-            env_name = env_error["loc"][0] if env_error["loc"] else "unknown"
-            env_msg = env_error["msg"]
-            print(f"Configuration error in '{env_name}': {env_msg}")
+            env_name: str
+            env_msg: str
+
+            if env_error[EnvErrorsFieldNames.LOC]:
+                env_name = env_error[EnvErrorsFieldNames.LOC][0]
+            else:
+                env_name = ConfigMessages.ENV_ERROR_UNKNOWN
+
+            env_msg = env_error[EnvErrorsFieldNames.ENV_ERROR_MESSAGE]
+            logger.error(f"{ConfigMessages.CONFIG_ERROR} '{env_name}': {env_msg}")
         raise
     else:
         return project_settings
