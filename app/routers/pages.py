@@ -6,10 +6,12 @@ from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Request
 from starlette.templating import Jinja2Templates
 
+from app.routers.constants import RouterFieldNames, FieldValues
+
 from app.dependencies.users import CurrentUserDep
 
-templates = Jinja2Templates(directory="app/templates")
-router = APIRouter(tags=["Pages"])
+templates = Jinja2Templates(directory=FieldValues.TEMPLATES_PATH)
+router = APIRouter(tags=[FieldValues.PAGES_TAG])
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -23,7 +25,8 @@ async def get_main_page(request: Request) -> HTMLResponse:
         HTMLResponse: Rendered index.html template.
     """
     return templates.TemplateResponse(
-        request, "index.html", context={"request": request}
+        request, FieldValues.INDEX_HTML,
+        context={RouterFieldNames.REQUEST: request}
     )
 
 
@@ -39,5 +42,6 @@ async def get_profile(request: Request, current_user: CurrentUserDep) -> HTMLRes
         HTMLResponse: Rendered profile.html template with user data.
     """
     return templates.TemplateResponse(
-        name="profile.html", context={"request": request, "profile": current_user}
+        name=FieldValues.PROFILE_HTML,
+        context={RouterFieldNames.REQUEST: request, RouterFieldNames.PROFILE: current_user}
     )

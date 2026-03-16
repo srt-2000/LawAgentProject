@@ -6,6 +6,11 @@ All require the current user; chats are scoped to that user.
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import ScalarResult
 
+from app.routers.constants import (
+    RouterFieldNames,
+    RouterStandardMessages,
+    FieldValues
+)
 from app.dependencies.dao import ChatDAODep
 from app.dependencies.users import CurrentUserDep
 from app.models.models import Chat
@@ -17,7 +22,7 @@ from app.schemas.chats import (
 from app.schemas.users import ResponseMessageDTO
 from app.services.chats import CurrentChatService
 
-router = APIRouter(prefix="/chats", tags=["Chats"])
+router = APIRouter(prefix="/chats", tags=[FieldValues.CHATS_TAG])
 
 
 @router.get("/", response_model=ChatListDTO)
@@ -93,7 +98,10 @@ async def get_chat_by_id(
     chat: ChatWithMessagesDTO | None = await chat_service.get_chat_with_id(chat_id)
 
     if chat is None:
-        raise HTTPException(status_code=404, detail="Chat not found")
+        raise HTTPException(
+            status_code=404,
+            detail=RouterStandardMessages.CHAT_NOT_FOUND
+        )
 
     return chat
 
@@ -115,7 +123,7 @@ async def delete_chat_with_id(
         ResponseMessageDTO: Message with count of deleted chats.
     """
     deleted_chats_count: int = await chat_dao.delete(
-        filter_by={"id": chat_id, "user_id": current_user.id}
+        filter_by={RouterFieldNames.ID: chat_id, RouterFieldNames.USER_ID: current_user.id}
     )
-    message: dict[str, str] = {"message": f"{deleted_chats_count} chats deleted"}
+    message: dict[str, str] = {RouterFieldNames.MESSAGE_FIELD: f"{deleted_chats_count} {RouterStandardMessages.CHATS_DELETED}"}
     return ResponseMessageDTO.model_validate(message)
