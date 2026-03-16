@@ -17,7 +17,7 @@ from app.constants import (
     ConfigFieldNames,
     EnvErrorsFieldNames,
     ConfigMessages,
-    Values,
+    ConfigValues,
     POSTGRESQL_ASYNCPG_LINK_BEGIN,
 )
 
@@ -51,7 +51,11 @@ class DatabaseSettings(BaseAppSettings):
         Raises:
             ValueError: If port is not in valid range (1-65535).
         """
-        if not Values.MIN_PORT_NUMBER <= port_number <= Values.MAX_PORT_NUMBER:
+        if (
+            not ConfigValues.MIN_PORT_NUMBER
+            <= port_number
+            <= ConfigValues.MAX_PORT_NUMBER
+        ):
             raise ValueError(ConfigMessages.PORT_NUMBER_VALUE_ERROR)
         return port_number
 
@@ -90,7 +94,11 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If rounds are not in valid range (4-31).
         """
-        if not Values.MIN_ROUNDS_NUMBER <= rounds_number <= Values.MAX_ROUNDS_NUMBER:
+        if (
+            not ConfigValues.MIN_ROUNDS_NUMBER
+            <= rounds_number
+            <= ConfigValues.MAX_ROUNDS_NUMBER
+        ):
             raise ValueError(ConfigMessages.CRYPT_ROUNDS_VALUE_ERROR)
         return rounds_number
 
@@ -108,7 +116,7 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If secret key is empty or too short (less than 32 characters).
         """
-        if not secret_key or len(secret_key) < Values.MAX_SECRET_KEY_LEN:
+        if not secret_key or len(secret_key) < ConfigValues.MAX_SECRET_KEY_LEN:
             raise ValueError(ConfigMessages.SECRET_KEY_VALUE_ERROR)
         return secret_key
 

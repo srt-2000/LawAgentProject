@@ -6,11 +6,8 @@ All require the current user; chats are scoped to that user.
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import ScalarResult
 
-from app.routers.constants import (
-    RouterFieldNames,
-    RouterStandardMessages,
-    FieldValues
-)
+from app.constants import BaseConstants
+from app.routers.constants import RouterFieldNames, RouterStandardMessages, FieldValues
 from app.dependencies.dao import ChatDAODep
 from app.dependencies.users import CurrentUserDep
 from app.models.models import Chat
@@ -27,8 +24,7 @@ router = APIRouter(prefix="/chats", tags=[FieldValues.CHATS_TAG])
 
 @router.get("/", response_model=ChatListDTO)
 async def get_user_chats_list(
-    current_user: CurrentUserDep,
-    chat_dao: ChatDAODep
+    current_user: CurrentUserDep, chat_dao: ChatDAODep
 ) -> ChatListDTO:
     """Return list of chats for the current user.
 
@@ -54,20 +50,19 @@ async def get_user_chats_list(
 
 @router.post("/")
 async def create(
-    current_user: CurrentUserDep,
-    chat_dao: ChatDAODep
+    current_user: CurrentUserDep, chat_dao: ChatDAODep
 ) -> ChatWithMessagesDTO:
     """Create a new chat for the current user.
-@router.post("/new_chat")
-async def create_new_chat(current_user: CurrentUserDep) -> ChatWithMessagesDTO:
-    Create a new chat for the current user. Returns the new chat with empty messages.
+    @router.post("/new_chat")
+    async def create_new_chat(current_user: CurrentUserDep) -> ChatWithMessagesDTO:
+        Create a new chat for the current user. Returns the new chat with empty messages.
 
-    Args:
-        current_user: Authenticated current user,
-        chat_dao: ChatDAO Dependency.
+        Args:
+            current_user: Authenticated current user,
+            chat_dao: ChatDAO Dependency.
 
-    Returns:
-        ChatWithMessagesDTO: New chat (id, title, user_id, created_at, messages=[]).
+        Returns:
+            ChatWithMessagesDTO: New chat (id, title, user_id, created_at, messages=[]).
     """
     chat_service: CurrentChatService = CurrentChatService(current_user.id, chat_dao)
     new_chat: ChatWithMessagesDTO = await chat_service.create_new_chat()
@@ -77,9 +72,7 @@ async def create_new_chat(current_user: CurrentUserDep) -> ChatWithMessagesDTO:
 
 @router.get("/{chat_id}", response_model=ChatWithMessagesDTO)
 async def get_chat_by_id(
-    chat_id: int,
-    current_user: CurrentUserDep,
-    chat_dao: ChatDAODep
+    chat_id: int, current_user: CurrentUserDep, chat_dao: ChatDAODep
 ) -> ChatWithMessagesDTO:
     """Return a single chat with messages by ID. Only if it belongs to the current user.
 
@@ -99,8 +92,7 @@ async def get_chat_by_id(
 
     if chat is None:
         raise HTTPException(
-            status_code=404,
-            detail=RouterStandardMessages.CHAT_NOT_FOUND
+            status_code=404, detail=RouterStandardMessages.CHAT_NOT_FOUND
         )
 
     return chat
@@ -108,9 +100,7 @@ async def get_chat_by_id(
 
 @router.delete("/{chat_id}")
 async def delete_chat_with_id(
-    chat_id: int,
-    current_user: CurrentUserDep,
-    chat_dao: ChatDAODep
+    chat_id: int, current_user: CurrentUserDep, chat_dao: ChatDAODep
 ) -> ResponseMessageDTO:
     """Delete a chat by ID for the current user.
 
@@ -123,7 +113,9 @@ async def delete_chat_with_id(
         ResponseMessageDTO: Message with count of deleted chats.
     """
     deleted_chats_count: int = await chat_dao.delete(
-        filter_by={RouterFieldNames.ID: chat_id, RouterFieldNames.USER_ID: current_user.id}
+        filter_by={RouterFieldNames.ID: chat_id, BaseConstants.USER_ID: current_user.id}
     )
-    message: dict[str, str] = {RouterFieldNames.MESSAGE_FIELD: f"{deleted_chats_count} {RouterStandardMessages.CHATS_DELETED}"}
+    message: dict[str, str] = {
+        BaseConstants.MESSAGE_FIELD: f"{deleted_chats_count} {RouterStandardMessages.CHATS_DELETED}"
+    }
     return ResponseMessageDTO.model_validate(message)

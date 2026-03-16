@@ -7,11 +7,12 @@ chat lifecycle: create new chat, load existing chat by ID for the current user.
 
 from fastapi import WebSocket
 
+from app.constants import BaseConstants
 from app.dependencies.dao import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDTO
 from app.services.message import WSMessageServiceMixin
-from app.services.constants import FieldNames
+from app.services.constants import FieldNames, StandardMessages
 
 
 class WSConnectionManager(WSMessageServiceMixin):
@@ -53,11 +54,7 @@ class WSConnectionManager(WSMessageServiceMixin):
 class CurrentChatService:
     """Creates and loads chats for the current user (used by WebSocket and HTTP)."""
 
-    def __init__(
-            self,
-            current_user_id: int,
-            chat_dao: ChatDAODep
-    ) -> None:
+    def __init__(self, current_user_id: int, chat_dao: ChatDAODep) -> None:
         """Store the user ID for all operations.
 
         Args:
@@ -74,8 +71,8 @@ class CurrentChatService:
             ChatWithMessagesDTO: New chat with id, title, user_id, created_at, messages=[].
         """
         data_to_create_new_chat: dict[str, str | int] = {
-            FieldNames.TITLE: f"new_chat of {self.user_id}",
-            FieldNames.USER_ID: self.user_id,
+            FieldNames.TITLE: f"{StandardMessages.NEW_CHAT_OF} {self.user_id}",
+            BaseConstants.USER_ID: self.user_id,
         }
         new_chat: Chat = await self.chat_dao.add(**data_to_create_new_chat)
 
@@ -88,8 +85,7 @@ class CurrentChatService:
         )
 
     async def get_chat_with_id(
-        self,
-        current_chat_id: int
+        self, current_chat_id: int
     ) -> ChatWithMessagesDTO | None:
         """Load a chat by ID if it belongs to the current user.
 

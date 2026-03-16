@@ -9,9 +9,10 @@ from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
 from loguru import logger
 
+from app.constants import BaseConstants
 from app.dependencies.dao import MessageDAODep
 from app.schemas.messages import WebSocketMessageDTO
-from app.services.constants import StandardMessages, FieldNames, FieldsValues
+from app.services.constants import StandardMessages, FieldsValues
 
 
 class WSMessageServiceMixin:
@@ -19,9 +20,7 @@ class WSMessageServiceMixin:
 
     @staticmethod
     async def send_message(
-            socket: WebSocket,
-            message: WebSocketMessageDTO,
-            message_dao: MessageDAODep
+        socket: WebSocket, message: WebSocketMessageDTO, message_dao: MessageDAODep
     ) -> None:
         """Send a message to the client as JSON and persist it in the database.
 
@@ -41,9 +40,7 @@ class WSMessageServiceMixin:
 
         try:
             await message_dao.add(
-                context=message.message,
-                chat_id=message.chat_id,
-                is_bot=message.is_bot
+                context=message.message, chat_id=message.chat_id, is_bot=message.is_bot
             )
         except Exception as error:
             logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
@@ -51,9 +48,7 @@ class WSMessageServiceMixin:
 
     @staticmethod
     async def receive_message(
-            socket: WebSocket,
-            chat_id: int,
-            message_dao: MessageDAODep
+        socket: WebSocket, chat_id: int, message_dao: MessageDAODep
     ) -> WebSocketMessageDTO:
         """Receive one JSON message from the client, persist it, and return a DTO.
 
@@ -83,7 +78,7 @@ class WSMessageServiceMixin:
             return error_message
 
         try:
-            received_text: str | None = message.get(FieldNames.MESSAGE)
+            received_text: str | None = message.get(BaseConstants.MESSAGE_FIELD)
             received_message: WebSocketMessageDTO = WebSocketMessageDTO(
                 message=received_text or FieldsValues.EMPTY_STRING,
                 chat_id=chat_id,

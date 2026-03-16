@@ -7,13 +7,21 @@ response payloads to avoid magic strings across the codebase.
 POSTGRESQL_ASYNCPG_LINK_BEGIN: str = "postgresql+asyncpg://"
 
 
+class BaseConstants:
+    """Common using constants."""
+
+    USER_DISABLED: str = "User is disabled"
+    MESSAGE_FIELD: str = "message"
+    USER_ID: str = "user_id"
+
+
 class ConfigFieldNames:
     DB_PORT: str = "DB_PORT"
     CRYPT_ROUNDS: str = "ROUNDS"
     SECRET_KEY: str = "SECRET_KEY"
 
 
-class Values:
+class ConfigValues:
     MIN_PORT_NUMBER: int = 1
     MAX_PORT_NUMBER: int = 65535
     MIN_ROUNDS_NUMBER: int = 4

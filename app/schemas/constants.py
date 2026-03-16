@@ -3,6 +3,7 @@
 This module centralizes commonly used constant values for request and
 response payloads to avoid magic strings across the codebase.
 """
+
 from typing import Literal
 
 
@@ -22,7 +23,6 @@ class FieldValues:
     PASS_FIELD_DESCRIPTION: str = "Password, 6 to 50 characters"
     PASS_CONFIRM_DESCRIPTION: str = "Must match password"
     EMAIL_EXAMPLE: str = "user@example.com"
-
 
     NAME_MIN_LEN: int = 2
     EMAIL_MIN_LEN: int = 6

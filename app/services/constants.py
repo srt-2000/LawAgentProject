@@ -13,16 +13,13 @@ class StandardMessages:
     SAVE_MESSAGE_TO_DB_ERROR: str = "Save message to DB error"
     SERIALIZE_MESSAGE_ERROR: str = "Serialize message before sending error"
     RECEIVE_MESSAGE_ERROR: str = "Receive message error"
-    USER_IS_DISABLED: str = "User is disabled"
-
+    NEW_CHAT_OF: str = "new chat of"
 
 
 class FieldNames:
     """Standard fields names for services."""
 
     TITLE: str = "title"
-    USER_ID: str = "user_id"
-    MESSAGE: str = "message"
     TOKEN_SUB: str = "sub"
     TOKEN_EXP: str = "exp"
 
@@ -33,4 +30,3 @@ class FieldsValues:
     EMPTY_STRING: str = ""
     UTF_8: str = "utf-8"
     EXP_DELTA_TIME: int = 5
-

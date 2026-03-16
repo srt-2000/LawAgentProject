@@ -27,24 +27,24 @@ class RequestUserRegistrationDTO(BaseModel):
         ...,
         min_length=FieldValues.NAME_MIN_LEN,
         max_length=FieldValues.MAX_FIELD_LEN,
-        description=FieldValues.NAME_FIELD_DESCRIPTION
+        description=FieldValues.NAME_FIELD_DESCRIPTION,
     )
     email: EmailStr = Field(
         ...,
         description=FieldValues.EMAIL_FIELD_DESCRIPTION,
-        examples=[FieldValues.EMAIL_EXAMPLE]
+        examples=[FieldValues.EMAIL_EXAMPLE],
     )
     password: str = Field(
         ...,
         min_length=FieldValues.PASS_MIN_LEN,
         max_length=FieldValues.MAX_FIELD_LEN,
-        description=FieldValues.PASS_FIELD_DESCRIPTION
+        description=FieldValues.PASS_FIELD_DESCRIPTION,
     )
     password_confirm: str = Field(
         ...,
         min_length=FieldValues.PASS_MIN_LEN,
         max_length=FieldValues.MAX_FIELD_LEN,
-        description=FieldValues.PASS_CONFIRM_DESCRIPTION
+        description=FieldValues.PASS_CONFIRM_DESCRIPTION,
     )
 
     @model_validator(mode=FieldValues.AFTER_MODE)
@@ -59,7 +59,7 @@ class RequestUserRegistrationDTO(BaseModel):
         """
         if self.password != self.password_confirm:
             raise ValueError(StandardMessages.PASSWORDS_NOT_MATCH)
-        return self
+        return self  # type: ignore[return-value]
 
 
 class RequestUserAuthDTO(BaseModel):
@@ -73,13 +73,13 @@ class RequestUserAuthDTO(BaseModel):
     email: EmailStr = Field(
         ...,
         description=FieldValues.EMAIL_FIELD_DESCRIPTION,
-        examples=[FieldValues.EMAIL_EXAMPLE]
+        examples=[FieldValues.EMAIL_EXAMPLE],
     )
     password: str = Field(
         ...,
         min_length=FieldValues.PASS_MIN_LEN,
         max_length=FieldValues.MAX_FIELD_LEN,
-        description=FieldValues.PASS_FIELD_DESCRIPTION
+        description=FieldValues.PASS_FIELD_DESCRIPTION,
     )
 
 
@@ -113,7 +113,7 @@ class RequestUserUpdateDTO(BaseModel):
                 raise ValueError(StandardMessages.PASSWORDS_NOT_MATCH)
         elif (self.password is None) ^ (self.password_confirm is None):
             raise ValueError(StandardMessages.PASS_CONFIRM_REQUIRE)
-        return self
+        return self  # type: ignore[return-value]
 
 
 class ResponseUserDTO(BaseModel):

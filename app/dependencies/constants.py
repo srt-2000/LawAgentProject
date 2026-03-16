@@ -11,7 +11,6 @@ class DependencyMessages:
     TOKEN_NOT_VALID: str = "Token is not valid"
     TOKEN_IS_EXPIRED: str = "Token is expired"
     USER_NOT_FOUND: str = "User not found"
-    USER_DISABLED: str = "User is disabled"
 
 
 class FieldValues:

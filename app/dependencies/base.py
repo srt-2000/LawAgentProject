@@ -12,6 +12,7 @@ from fastapi import HTTPException, status
 from jwt import DecodeError, ExpiredSignatureError
 
 from app.config import settings
+from app.constants import BaseConstants
 from app.dependencies.constants import DependencyMessages
 from app.dependencies.dao import UserDAODep
 from app.models.models import User
@@ -35,14 +36,13 @@ async def decode_token(token: str) -> ResponsePayloadDTO:
     try:
         auth_data: AuthConfigDTO = cast(AuthConfigDTO, settings.auth.auth_config)
         payload: ResponsePayloadDTO = jwt.decode(
-            token, auth_data.secret_key,
-            algorithms=[auth_data.algorithm]
+            token, auth_data.secret_key, algorithms=[auth_data.algorithm]
         )
         valid_payload: ResponsePayloadDTO = ResponsePayloadDTO.model_validate(payload)
     except (DecodeError, ExpiredSignatureError, Exception):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_NOT_VALID
+            detail=DependencyMessages.TOKEN_NOT_VALID,
         )
 
     expire: int | None = valid_payload.exp
@@ -50,7 +50,7 @@ async def decode_token(token: str) -> ResponsePayloadDTO:
     if expire is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_NOT_VALID
+            detail=DependencyMessages.TOKEN_NOT_VALID,
         )
 
     expire_time: datetime = datetime.fromtimestamp(expire, tz=timezone.utc)
@@ -58,15 +58,14 @@ async def decode_token(token: str) -> ResponsePayloadDTO:
     if expire_time < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_IS_EXPIRED
+            detail=DependencyMessages.TOKEN_IS_EXPIRED,
         )
 
     return valid_payload
 
 
 async def get_current_active_user(
-    payload: ResponsePayloadDTO,
-    user_dao: UserDAODep
+    payload: ResponsePayloadDTO, user_dao: UserDAODep
 ) -> ResponseUserDTO:
     """Get current active user from token payload.
 
@@ -85,7 +84,7 @@ async def get_current_active_user(
     if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.USER_NOT_FOUND
+            detail=DependencyMessages.USER_NOT_FOUND,
         )
 
     user: User | None = await user_dao.find_one_or_none(id=int(user_id))
@@ -93,13 +92,12 @@ async def get_current_active_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.USER_NOT_FOUND
+            detail=DependencyMessages.USER_NOT_FOUND,
         )
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=DependencyMessages.USER_DISABLED
+            status_code=status.HTTP_403_FORBIDDEN, detail=BaseConstants.USER_DISABLED
         )
 
     return ResponseUserDTO.model_validate(user)

@@ -3,6 +3,7 @@
 This module centralizes commonly used constant values for request and
 response payloads to avoid magic strings across the codebase.
 """
+
 from typing import Literal
 
 
@@ -12,12 +13,10 @@ class RouterFieldNames:
     PASSWORD_CONFIRM: str = "password_confirm"
     PASSWORD_HASH: str = "password_hash"
     PASSWORD: str = "password"
-    MESSAGE_FIELD: str = "message"
     OK: str = "ok"
     ACCESS_TOKEN: str = "access_token"
     REFRESH_TOKEN: str = "refresh_token"
     CHAT_ID: str = "chat_id"
-    USER_ID: str = "user_id"
     ID: str = "id"
     REQUEST: str = "request"
     PROFILE: str = "profile"
@@ -49,15 +48,11 @@ class RouterStandardMessages:
     USER_REGISTERED: str = "user registered successfully"
     USER_IS_EXIST: str = "User is already exist"
     USER_NOT_FOUND: str = "User not found"
-    USER_IS_DISABLED: str = "user is disabled"
     USER_NOT_DISABLED: str = "User not disabled"
 
     # CHAT messages
     WELCOME_MESSAGE: str = "Hello! How can I help you?"
-    INVALID_CHAT:str = "Invalid chat_id"
+    INVALID_CHAT: str = "Invalid chat_id"
     CHAT_NOT_FOUND: str = "Chat not found"
     STUB_MESSAGE: str = "STUB test message sent/receive"
     CHATS_DELETED: str = "chats deleted"
-
-
-

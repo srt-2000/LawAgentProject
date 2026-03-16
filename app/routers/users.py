@@ -5,12 +5,9 @@ User auth and profile: register, login (sets cookie), logout, me, update, disabl
 from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
+from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.routers.constants import (
-    RouterFieldNames,
-    FieldValues,
-    RouterStandardMessages
-)
+from app.routers.constants import RouterFieldNames, FieldValues, RouterStandardMessages
 from app.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.schemas.users import (
@@ -48,17 +45,19 @@ async def register_user(
     if check_user:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=RouterStandardMessages.USER_IS_EXIST
+            detail=RouterStandardMessages.USER_IS_EXIST,
         )
     new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
         exclude={RouterFieldNames.PASSWORD_CONFIRM}
     )
-    new_user_data_to_add[RouterFieldNames.PASSWORD_HASH] = AuthService.get_password_hash(
-        new_user_data_to_add.pop(RouterFieldNames.PASSWORD)
+    new_user_data_to_add[RouterFieldNames.PASSWORD_HASH] = (
+        AuthService.get_password_hash(
+            new_user_data_to_add.pop(RouterFieldNames.PASSWORD)
+        )
     )
     await user_dao.add(**new_user_data_to_add)
     message: dict[str, str] = {
-        RouterFieldNames.MESSAGE_FIELD: f"{new_user_data.name} {RouterStandardMessages.USER_REGISTERED}"
+        BaseConstants.MESSAGE_FIELD: f"{new_user_data.name} {RouterStandardMessages.USER_REGISTERED}"
     }
     return ResponseMessageDTO.model_validate(message)
 
@@ -106,7 +105,7 @@ async def login_user(
         RouterFieldNames.OK: True,
         RouterFieldNames.ACCESS_TOKEN: access_token,
         RouterFieldNames.REFRESH_TOKEN: None,
-        RouterFieldNames.MESSAGE_FIELD: RouterStandardMessages.AUTH_SUCCESS,
+        BaseConstants.MESSAGE_FIELD: RouterStandardMessages.AUTH_SUCCESS,
     }
     return ResponseDataUserLoginDTO.model_validate(response_data)
 
@@ -122,7 +121,7 @@ async def logout_user(response: Response) -> ResponseMessageDTO:
         ResponseMessageDTO: Logout confirmation message.
     """
     response.delete_cookie(key=FieldValues.USERS_ACCESS_TOKEN)
-    message = {RouterFieldNames.MESSAGE_FIELD: RouterStandardMessages.LOGOUT_MESSAGE}
+    message = {BaseConstants.MESSAGE_FIELD: RouterStandardMessages.LOGOUT_MESSAGE}
     return ResponseMessageDTO.model_validate(message)
 
 
@@ -168,11 +167,10 @@ async def update_me(
         )
 
     if update_data:
-
         try:
             updated_user: User = await user_dao.update(
                 filter_by={RouterFieldNames.ID: current_user.id}, **update_data
-                )
+            )
         except ObjectNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -199,14 +197,13 @@ async def disable_me(
     """
     try:
         disabled_user: User = await user_dao.update(
-            filter_by={RouterFieldNames.ID: current_user.id},
-            is_active=False
+            filter_by={RouterFieldNames.ID: current_user.id}, is_active=False
         )
 
         if disabled_user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=RouterStandardMessages.USER_NOT_DISABLED
+                detail=RouterStandardMessages.USER_NOT_DISABLED,
             )
 
     except ObjectNotFoundException:
@@ -216,6 +213,6 @@ async def disable_me(
         )
 
     message: dict[str, str] = {
-        RouterFieldNames.MESSAGE_FIELD: f"{disabled_user.name} {RouterStandardMessages.USER_IS_DISABLED}"
+        BaseConstants.MESSAGE_FIELD: f"{disabled_user.name} {BaseConstants.USER_DISABLED}"
     }
     return ResponseMessageDTO.model_validate(message)
