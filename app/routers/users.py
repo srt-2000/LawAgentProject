@@ -197,10 +197,24 @@ async def disable_me(
     Returns:
         ResponseMessageDTO: Confirmation message.
     """
-    disabled_user: User = await user_dao.update(
-        filter_by={RouterFieldNames.ID: current_user.id},
-        is_active=False
-    )
+    try:
+        disabled_user: User = await user_dao.update(
+            filter_by={RouterFieldNames.ID: current_user.id},
+            is_active=False
+        )
+
+        if disabled_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=RouterStandardMessages.USER_NOT_DISABLED
+            )
+
+    except ObjectNotFoundException:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=RouterStandardMessages.USER_NOT_FOUND,
+        )
+
     message: dict[str, str] = {
         RouterFieldNames.MESSAGE_FIELD: f"{disabled_user.name} {RouterStandardMessages.USER_IS_DISABLED}"
     }

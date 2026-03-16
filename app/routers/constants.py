@@ -50,6 +50,7 @@ class RouterStandardMessages:
     USER_IS_EXIST: str = "User is already exist"
     USER_NOT_FOUND: str = "User not found"
     USER_IS_DISABLED: str = "user is disabled"
+    USER_NOT_DISABLED: str = "User not disabled"
 
     # CHAT messages
     WELCOME_MESSAGE: str = "Hello! How can I help you?"
