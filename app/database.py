@@ -1,8 +1,8 @@
 """
-Database configuration and base model.
+Database engine, session factory, and base model.
 
-This module sets up the async SQLAlchemy engine, session maker,
-and provides a base model class for all database models.
+Configures async PostgreSQL via SQLAlchemy; all ORM models inherit BaseSQLModel
+and get created_at/updated_at and lowercase table names.
 """
 
 from datetime import datetime
@@ -20,21 +20,17 @@ async_session_maker = async_sessionmaker(async_engine, expire_on_commit=False)
 
 
 class BaseSQLModel(AsyncAttrs, DeclarativeBase):
-    """Base SQLAlchemy model with common fields and table name generation.
-
-    Automatically generates lowercase table names and includes timestamp fields
-    for tracking creation and update times.
-    """
+    """Base for all ORM models: table name = lower(class name), created_at/updated_at."""
 
     __abstract__ = True
 
     @classmethod
     @declared_attr.directive
     def __tablename__(cls) -> str:
-        """Generate table name from class name in lowercase.
+        """Use the class name in lowercase as the table name.
 
         Returns:
-            str: Lowercase class name for table name.
+            str: Table name (e.g. User -> "user").
         """
         return f"{cls.__name__.lower()}"
 

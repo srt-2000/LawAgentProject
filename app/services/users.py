@@ -5,20 +5,26 @@ This module provides password hashing, verification, and JWT token management.
 """
 
 from datetime import timedelta, datetime, timezone
-from typing import cast
+from typing import cast, Final
 
 import bcrypt
 import jwt
 from fastapi import HTTPException, status
 from pydantic import EmailStr
 from app.config import settings
-from app.dao.users_dao import UserDAO
-from app.schemas.config_schema import AuthConfigDTO
-from app.schemas.users_schema import ResponseUserDTO, DBUserDTO
+from app.constants import BaseConstants
+from app.dao.exceptions import ObjectNotFoundException
+from app.api.dependencies.dao import UserDAODep
+from app.models.models import User
+from app.services.constants import FieldNames, FieldsValues, StandardMessages
+from app.schemas.config import AuthConfigData
+from app.schemas.users import AuthServiceUserDomain
 
 
 class PasswordService:
     """Service for password hashing and verification."""
+
+    _ENCODING: Final[str] = FieldsValues.UTF_8
 
     @classmethod
     def get_password_hash(cls, password: str) -> str:
@@ -31,8 +37,8 @@ class PasswordService:
             str: Hashed password.
         """
         salt = bcrypt.gensalt(rounds=settings.auth.ROUNDS)
-        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
-        return hashed.decode("utf-8")
+        hashed = bcrypt.hashpw(password.encode(cls._ENCODING), salt)
+        return hashed.decode(cls._ENCODING)
 
     @classmethod
     def verify_password(cls, plain_password: str, hashed_password: str) -> bool:
@@ -46,7 +52,7 @@ class PasswordService:
             bool: True if password matches, False otherwise.
         """
         return bcrypt.checkpw(
-            plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+            plain_password.encode(cls._ENCODING), hashed_password.encode(cls._ENCODING)
         )
 
 
@@ -55,34 +61,44 @@ class AuthService(PasswordService):
 
     @classmethod
     async def authenticate_user(
-        cls, email: EmailStr, password: str
-    ) -> ResponseUserDTO | None:
+        cls, email: EmailStr, password: str, user_dao: UserDAODep
+    ) -> AuthServiceUserDomain:
         """Authenticate user by email and password.
 
         Args:
             email: User's email address.
             password: User's plain text password.
+            user_dao: UserDAO Dependency.
 
         Returns:
-            ResponseUserDTO | None: User data if authenticated, None if invalid credentials.
+            AuthServiceUserDomain | None: User data if authenticated, None if invalid credentials.
 
         Raises:
             HTTPException: If user account is not active.
         """
-        user: DBUserDTO | None = await UserDAO.find_one_or_none(email=email)
-
-        if not user or not cls.verify_password(
-            plain_password=password, hashed_password=str(user.password_hash)
-        ):
-            return None
-        if not user.is_active:
+        try:
+            user: User = await user_dao.get_one_user(filter_by={"email": email})
+        except ObjectNotFoundException:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="User is not active"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=StandardMessages.USER_NOT_FOUND,
             )
 
-        return ResponseUserDTO.model_validate(
-            user.model_dump(exclude={"password_hash"})
-        )
+        if not cls.verify_password(
+            plain_password=password, hashed_password=str(user.password_hash)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=StandardMessages.USER_NOT_FOUND,
+            )
+
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=BaseConstants.USER_DISABLED,
+            )
+
+        return AuthServiceUserDomain.model_validate(user)
 
     @staticmethod
     def create_access_token(data: str) -> str:
@@ -94,10 +110,12 @@ class AuthService(PasswordService):
         Returns:
             str: Encoded JWT token.
         """
-        expire_time: datetime = datetime.now(timezone.utc) + timedelta(days=5)
-        to_encode = {"sub": data, "exp": expire_time}
-        auth_data: AuthConfigDTO = cast(AuthConfigDTO, settings.auth.auth_config)
-        encode_jwt: str = jwt.encode(
+        expire_time: datetime = datetime.now(timezone.utc) + timedelta(
+            days=FieldsValues.EXP_DELTA_TIME
+        )
+        to_encode = {FieldNames.TOKEN_SUB: data, FieldNames.TOKEN_EXP: expire_time}
+        auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
+        encoded_jwt: str = jwt.encode(
             to_encode, auth_data.secret_key, algorithm=auth_data.algorithm
         )
-        return encode_jwt
+        return encoded_jwt
