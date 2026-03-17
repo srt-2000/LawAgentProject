@@ -10,7 +10,7 @@ from fastapi.websockets import WebSocketDisconnect
 from loguru import logger
 
 from app.constants import BaseConstants
-from app.dependencies.dao import MessageDAODep
+from app.api.dependencies.dao import MessageDAODep
 from app.schemas.messages import WebSocketMessageDomain
 from app.services.constants import StandardMessages, FieldsValues
 

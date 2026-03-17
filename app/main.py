@@ -8,10 +8,10 @@ WebSocket chat, HTTP pages, user auth, and chat CRUD.
 from fastapi import FastAPI
 from starlette.staticfiles import StaticFiles
 
-from app.routers.ws import router as router_ws_chat
-from app.routers.pages import router as router_pages
-from app.routers.users import router as router_users
-from app.routers.chats import router as router_chats
+from app.api.routers.ws import router as router_ws_chat
+from app.api.routers.pages import router as router_pages
+from app.api.routers.users import router as router_users
+from app.api.routers.chats import router as router_chats
 
 
 app = FastAPI(title="Agent Chat", description="Law Agent Chat", version="1.0.0")

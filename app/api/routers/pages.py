@@ -6,9 +6,9 @@ from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Request
 from starlette.templating import Jinja2Templates
 
-from app.routers.constants import RouterFieldNames, FieldValues
+from app.api.routers.constants import RouterFieldNames, FieldValues
 
-from app.dependencies.users import CurrentUserDep
+from app.api.dependencies.users import CurrentUserDep
 
 templates = Jinja2Templates(directory=FieldValues.TEMPLATES_PATH)
 router = APIRouter(tags=[FieldValues.PAGES_TAG])

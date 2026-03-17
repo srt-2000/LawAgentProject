@@ -11,7 +11,7 @@ from fastapi import Depends
 from app.dao.chats import ChatDAO
 from app.dao.messages import MessageDAO
 from app.dao.users import UserDAO
-from app.dependencies.session import SessionDep
+from app.api.dependencies.session import SessionDep
 
 
 async def get_user_dao(session: SessionDep) -> UserDAO:

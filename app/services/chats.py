@@ -8,7 +8,7 @@ chat lifecycle: create new chat, load existing chat by ID for the current user.
 from fastapi import WebSocket
 
 from app.constants import BaseConstants
-from app.dependencies.dao import ChatDAODep
+from app.api.dependencies.dao import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDomain
 from app.services.message import WSMessageServiceMixin

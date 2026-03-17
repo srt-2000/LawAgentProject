@@ -9,9 +9,9 @@ from starlette import status
 
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.routers.constants import RouterFieldNames, RouterStandardMessages, FieldValues
-from app.dependencies.dao import ChatDAODep
-from app.dependencies.users import CurrentUserDep
+from app.api.routers.constants import RouterFieldNames, RouterStandardMessages, FieldValues
+from app.api.dependencies.dao import ChatDAODep
+from app.api.dependencies.users import CurrentUserDep
 from app.models.models import Chat
 from app.schemas.chats import (
     ChatListDTO,

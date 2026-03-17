@@ -14,7 +14,7 @@ from pydantic import EmailStr
 from app.config import settings
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.dependencies.dao import UserDAODep
+from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.services.constants import FieldNames, FieldsValues, StandardMessages
 from app.schemas.config import AuthConfigData

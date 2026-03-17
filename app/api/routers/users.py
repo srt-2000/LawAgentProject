@@ -7,8 +7,8 @@ from pydantic import EmailStr
 
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.routers.constants import RouterFieldNames, FieldValues, RouterStandardMessages
-from app.dependencies.dao import UserDAODep
+from app.api.routers.constants import RouterFieldNames, FieldValues, RouterStandardMessages
+from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.schemas.users import (
     RequestUserRegistrationDTO,
@@ -20,7 +20,7 @@ from app.schemas.users import (
     AuthServiceUserDomain,
 )
 from app.services.users import AuthService
-from app.dependencies.users import CurrentUserDep
+from app.api.dependencies.users import CurrentUserDep
 
 router = APIRouter(prefix="/user", tags=[FieldValues.USER_TAG])
 

@@ -10,9 +10,9 @@ from loguru import logger
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.dao.exceptions import ObjectNotFoundException
-from app.routers.constants import RouterStandardMessages, RouterFieldNames
-from app.dependencies.chats import WebsocketCurrentUserDep
-from app.dependencies.dao import ChatDAODep, MessageDAODep
+from app.api.routers.constants import RouterStandardMessages, RouterFieldNames
+from app.api.dependencies.chats import WebsocketCurrentUserDep
+from app.api.dependencies.dao import ChatDAODep, MessageDAODep
 from app.schemas.chats import ChatWithMessagesDomain
 from app.schemas.messages import WebSocketMessageDomain
 from app.services.chats import WSConnectionManager, CurrentChatService

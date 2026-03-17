@@ -14,8 +14,8 @@ from jwt import DecodeError, ExpiredSignatureError
 from app.config import settings
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.dependencies.constants import DependencyMessages
-from app.dependencies.dao import UserDAODep
+from app.api.dependencies.constants import DependencyMessages
+from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.schemas.config import AuthConfigData
 from app.schemas.dependencies import ResponsePayloadDTO
