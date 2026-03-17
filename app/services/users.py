@@ -16,8 +16,8 @@ from app.constants import BaseConstants
 from app.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.services.constants import FieldNames, FieldsValues
-from app.schemas.config import AuthConfigDTO
-from app.schemas.users import ResponseUserDTO
+from app.schemas.config import AuthConfigData
+from app.schemas.users import AuthServiceUserDomain
 
 
 class PasswordService:
@@ -61,7 +61,7 @@ class AuthService(PasswordService):
     @classmethod
     async def authenticate_user(
         cls, email: EmailStr, password: str, user_dao: UserDAODep
-    ) -> ResponseUserDTO | None:
+    ) -> AuthServiceUserDomain | None:
         """Authenticate user by email and password.
 
         Args:
@@ -70,7 +70,7 @@ class AuthService(PasswordService):
             user_dao: UserDAO Dependency.
 
         Returns:
-            ResponseUserDTO | None: User data if authenticated, None if invalid credentials.
+            AuthServiceUserDomain | None: User data if authenticated, None if invalid credentials.
 
         Raises:
             HTTPException: If user account is not active.
@@ -88,7 +88,7 @@ class AuthService(PasswordService):
                 detail=BaseConstants.USER_DISABLED,
             )
 
-        return ResponseUserDTO.model_validate(user)
+        return AuthServiceUserDomain.model_validate(user)
 
     @staticmethod
     def create_access_token(data: str) -> str:
@@ -104,7 +104,7 @@ class AuthService(PasswordService):
             days=FieldsValues.EXP_DELTA_TIME
         )
         to_encode = {FieldNames.TOKEN_SUB: data, FieldNames.TOKEN_EXP: expire_time}
-        auth_data: AuthConfigDTO = cast(AuthConfigDTO, settings.auth.auth_config)
+        auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
         encode_jwt: str = jwt.encode(
             to_encode, auth_data.secret_key, algorithm=auth_data.algorithm
         )

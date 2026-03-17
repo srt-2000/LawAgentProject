@@ -16,7 +16,7 @@ from app.constants import BaseConstants
 from app.dependencies.constants import DependencyMessages
 from app.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.schemas.config import AuthConfigDTO
+from app.schemas.config import AuthConfigData
 from app.schemas.dependencies import ResponsePayloadDTO
 from app.schemas.users import ResponseUserDTO
 
@@ -34,7 +34,7 @@ async def decode_token(token: str) -> ResponsePayloadDTO:
         HTTPException: If token is invalid or expired.
     """
     try:
-        auth_data: AuthConfigDTO = cast(AuthConfigDTO, settings.auth.auth_config)
+        auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
         payload: ResponsePayloadDTO = jwt.decode(
             token, auth_data.secret_key, algorithms=[auth_data.algorithm]
         )

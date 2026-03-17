@@ -12,7 +12,7 @@ from fastapi.exceptions import ValidationException
 from pydantic import field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.schemas.config import AuthConfigDTO
+from app.schemas.config import AuthConfigData
 from app.constants import (
     ConfigFieldNames,
     EnvErrorsFieldNames,
@@ -121,13 +121,13 @@ class AuthSettings(BaseAppSettings):
         return secret_key
 
     @computed_field  # type: ignore[prop-decorator]
-    def auth_config(self) -> AuthConfigDTO:
+    def auth_config(self) -> AuthConfigData:
         """Get authentication configuration data.
 
         Returns:
-            AuthConfigDTO: Authentication data containing secret key and algorithm.
+            AuthConfigData: Authentication data containing secret key and algorithm.
         """
-        return AuthConfigDTO(
+        return AuthConfigData(
             secret_key=self.SECRET_KEY,
             algorithm=self.ALGORITHM,
         )

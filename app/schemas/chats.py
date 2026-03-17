@@ -31,7 +31,7 @@ class MessageDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class ChatBaseDTO(BaseModel):
+class ChatBaseDomain(BaseModel):
     """Shared chat fields: id, title, owner, created_at. Title default from settings if None.
 
     Attributes:
@@ -65,7 +65,7 @@ class ChatBaseDTO(BaseModel):
             return title
 
 
-class ChatWithMessagesDTO(ChatBaseDTO):
+class ChatWithMessagesDTO(ChatBaseDomain):
     """Chat plus its messages. Used when opening a chat or creating a new one.
 
     Attributes:
@@ -75,7 +75,17 @@ class ChatWithMessagesDTO(ChatBaseDTO):
     messages: list[MessageDTO] | None = None
 
 
-class ChatListSideBarItemDTO(ChatBaseDTO):
+class ChatWithMessagesDomain(ChatBaseDomain):
+    """Chat plus its messages. Used when opening a chat or creating a new one.
+
+    Attributes:
+        messages: Ordered list of messages; None or [] when not loaded or new chat.
+    """
+
+    messages: list[MessageDTO] | None = None
+
+
+class ChatListSideBarItemDTO(ChatBaseDomain):
     """One chat in the sidebar: base fields plus updated_at for sorting/display.
 
     Attributes:

@@ -8,7 +8,7 @@ Defines DTOs for WebSocket chat: payload sent to and from the client
 from pydantic import BaseModel
 
 
-class WebSocketMessageDTO(BaseModel):
+class WebSocketMessageDomain(BaseModel):
     """One chat message as sent over WebSocket or stored for a chat.
 
     Attributes:

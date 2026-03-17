@@ -12,8 +12,8 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.routers.constants import RouterStandardMessages, RouterFieldNames
 from app.dependencies.chats import WebsocketCurrentUserDep
 from app.dependencies.dao import ChatDAODep, MessageDAODep
-from app.schemas.chats import ChatWithMessagesDTO
-from app.schemas.messages import WebSocketMessageDTO
+from app.schemas.chats import ChatWithMessagesDomain
+from app.schemas.messages import WebSocketMessageDomain
 from app.services.chats import WSConnectionManager, CurrentChatService
 from app.services.constants import StandardMessages
 
@@ -32,7 +32,7 @@ async def websocket_chat(
     """Handle a single WebSocket: create or load chat, then loop on messages with stub reply."""
     raw_chat_id: str | None = socket.query_params.get(RouterFieldNames.CHAT_ID)
     current_chat_service: CurrentChatService = CurrentChatService(user.id, chat_dao)
-    current_chat: ChatWithMessagesDTO
+    current_chat: ChatWithMessagesDomain
 
     if raw_chat_id:
         try:
@@ -43,7 +43,7 @@ async def websocket_chat(
             return
         else:
             current_chat_by_id: (
-                ChatWithMessagesDTO | None
+                ChatWithMessagesDomain | None
             ) = await current_chat_service.get_chat_with_id(chat_id_to_check)
 
             if current_chat_by_id is None:
@@ -59,7 +59,7 @@ async def websocket_chat(
 
     await chat_connection_manager.open_chat_connection(user.id, socket)
 
-    welcome_message: WebSocketMessageDTO = WebSocketMessageDTO(
+    welcome_message: WebSocketMessageDomain = WebSocketMessageDomain(
         message=RouterStandardMessages.WELCOME_MESSAGE,
         chat_id=current_chat.id,
         is_bot=True,
@@ -69,7 +69,7 @@ async def websocket_chat(
 
     try:
         while True:
-            message_to_receive: WebSocketMessageDTO = (
+            message_to_receive: WebSocketMessageDomain = (
                 await chat_connection_manager.receive_message(
                     socket,
                     chat_id=current_chat.id,
@@ -79,7 +79,7 @@ async def websocket_chat(
             if message_to_receive == StandardMessages.WS_ERROR_MESSAGE:
                 break
 
-            agent_message: WebSocketMessageDTO = WebSocketMessageDTO(
+            agent_message: WebSocketMessageDomain = WebSocketMessageDomain(
                 message=f"{RouterStandardMessages.STUB_MESSAGE}, {message_to_receive.message}",
                 chat_id=current_chat.id,
                 is_bot=True,

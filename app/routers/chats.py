@@ -15,6 +15,7 @@ from app.schemas.chats import (
     ChatListDTO,
     ChatWithMessagesDTO,
     ChatListSideBarItemDTO,
+    ChatWithMessagesDomain,
 )
 from app.schemas.users import ResponseMessageDTO
 from app.services.chats import CurrentChatService
@@ -51,7 +52,7 @@ async def get_user_chats_list(
 @router.post("/")
 async def create(
     current_user: CurrentUserDep, chat_dao: ChatDAODep
-) -> ChatWithMessagesDTO:
+) -> ChatWithMessagesDomain:
     """Create a new chat for the current user.
     @router.post("/new_chat")
     async def create_new_chat(current_user: CurrentUserDep) -> ChatWithMessagesDTO:
@@ -65,7 +66,7 @@ async def create(
             ChatWithMessagesDTO: New chat (id, title, user_id, created_at, messages=[]).
     """
     chat_service: CurrentChatService = CurrentChatService(current_user.id, chat_dao)
-    new_chat: ChatWithMessagesDTO = await chat_service.create_new_chat()
+    new_chat: ChatWithMessagesDomain = await chat_service.create_new_chat()
 
     return new_chat
 

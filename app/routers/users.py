@@ -16,7 +16,7 @@ from app.schemas.users import (
     ResponseUserDTO,
     RequestUserUpdateDTO,
     ResponseMessageDTO,
-    ResponseDataUserLoginDTO,
+    ResponseDataUserLoginDTO, AuthServiceUserDomain,
 )
 from app.services.users import AuthService
 from app.dependencies.users import CurrentUserDep
@@ -79,7 +79,7 @@ async def login_user(
     Raises:
         HTTPException: If credentials are invalid.
     """
-    check_user: ResponseUserDTO | None = await AuthService.authenticate_user(
+    check_user: AuthServiceUserDomain | None = await AuthService.authenticate_user(
         email=login_user_data.email,
         password=login_user_data.password,
         user_dao=user_dao,

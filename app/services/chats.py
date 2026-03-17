@@ -10,7 +10,7 @@ from fastapi import WebSocket
 from app.constants import BaseConstants
 from app.dependencies.dao import ChatDAODep
 from app.models.models import Chat
-from app.schemas.chats import ChatWithMessagesDTO
+from app.schemas.chats import ChatWithMessagesDTO, ChatWithMessagesDomain
 from app.services.message import WSMessageServiceMixin
 from app.services.constants import FieldNames, StandardMessages
 
@@ -64,7 +64,7 @@ class CurrentChatService:
         self.user_id: int = current_user_id
         self.chat_dao = chat_dao
 
-    async def create_new_chat(self) -> ChatWithMessagesDTO:
+    async def create_new_chat(self) -> ChatWithMessagesDomain:
         """Create a new chat for the current user. Returns DTO with empty messages.
 
         Returns:
@@ -76,7 +76,7 @@ class CurrentChatService:
         }
         new_chat: Chat = await self.chat_dao.add(**data_to_create_new_chat)
 
-        return ChatWithMessagesDTO(
+        return ChatWithMessagesDomain(
             id=new_chat.id,
             title=new_chat.title,
             user_id=new_chat.user_id,

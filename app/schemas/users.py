@@ -138,6 +138,28 @@ class ResponseUserDTO(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AuthServiceUserDomain(BaseModel):
+    """User AuthService User Domain schema (without password).
+
+    Attributes:
+        id: User ID.
+        name: User's display name.
+        email: User's email address.
+        role: User role (admin or user).
+        is_active: Account active status.
+        chats: List of user's chats.
+    """
+
+    id: int
+    name: str
+    email: EmailStr
+    role: Role
+    is_active: bool
+    chats: list[ChatWithMessagesDTO] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class DBUserDTO(BaseModel):
     """Database user schema (with password hash).
 

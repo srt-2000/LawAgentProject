@@ -11,7 +11,7 @@ from loguru import logger
 
 from app.constants import BaseConstants
 from app.dependencies.dao import MessageDAODep
-from app.schemas.messages import WebSocketMessageDTO
+from app.schemas.messages import WebSocketMessageDomain
 from app.services.constants import StandardMessages, FieldsValues
 
 
@@ -20,7 +20,7 @@ class WSMessageServiceMixin:
 
     @staticmethod
     async def send_message(
-        socket: WebSocket, message: WebSocketMessageDTO, message_dao: MessageDAODep
+        socket: WebSocket, message: WebSocketMessageDomain, message_dao: MessageDAODep
     ) -> None:
         """Send a message to the client as JSON and persist it in the database.
 
@@ -49,7 +49,7 @@ class WSMessageServiceMixin:
     @staticmethod
     async def receive_message(
         socket: WebSocket, chat_id: int, message_dao: MessageDAODep
-    ) -> WebSocketMessageDTO:
+    ) -> WebSocketMessageDomain:
         """Receive one JSON message from the client, persist it, and return a DTO.
 
         Expects client to send {"message": "text"}. chat_id is set server-side.
@@ -61,9 +61,9 @@ class WSMessageServiceMixin:
             message_dao: Message DAO Dependency.
 
         Returns:
-            WebSocketMessageDTO: Parsed message with chat_id and is_bot=False, or error DTO on failure.
+            WebSocketMessageDomain: Parsed message with chat_id and is_bot=False, or error DTO on failure.
         """
-        error_message: WebSocketMessageDTO = WebSocketMessageDTO(
+        error_message: WebSocketMessageDomain = WebSocketMessageDomain(
             message=StandardMessages.WS_ERROR_MESSAGE,
             chat_id=chat_id,
             is_bot=False,
@@ -79,7 +79,7 @@ class WSMessageServiceMixin:
 
         try:
             received_text: str | None = message.get(BaseConstants.MESSAGE_FIELD)
-            received_message: WebSocketMessageDTO = WebSocketMessageDTO(
+            received_message: WebSocketMessageDomain = WebSocketMessageDomain(
                 message=received_text or FieldsValues.EMPTY_STRING,
                 chat_id=chat_id,
                 is_bot=False,
