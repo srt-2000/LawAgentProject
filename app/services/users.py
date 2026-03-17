@@ -5,7 +5,7 @@ This module provides password hashing, verification, and JWT token management.
 """
 
 from datetime import timedelta, datetime, timezone
-from typing import cast
+from typing import cast, Final
 
 import bcrypt
 import jwt
@@ -13,9 +13,10 @@ from fastapi import HTTPException, status
 from pydantic import EmailStr
 from app.config import settings
 from app.constants import BaseConstants
+from app.dao.exceptions import ObjectNotFoundException
 from app.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.services.constants import FieldNames, FieldsValues
+from app.services.constants import FieldNames, FieldsValues, StandardMessages
 from app.schemas.config import AuthConfigData
 from app.schemas.users import AuthServiceUserDomain
 
@@ -23,7 +24,7 @@ from app.schemas.users import AuthServiceUserDomain
 class PasswordService:
     """Service for password hashing and verification."""
 
-    _ENCODING: str = FieldsValues.UTF_8
+    _ENCODING: Final[str] = FieldsValues.UTF_8
 
     @classmethod
     def get_password_hash(cls, password: str) -> str:
@@ -61,7 +62,7 @@ class AuthService(PasswordService):
     @classmethod
     async def authenticate_user(
         cls, email: EmailStr, password: str, user_dao: UserDAODep
-    ) -> AuthServiceUserDomain | None:
+    ) -> AuthServiceUserDomain:
         """Authenticate user by email and password.
 
         Args:
@@ -75,12 +76,21 @@ class AuthService(PasswordService):
         Raises:
             HTTPException: If user account is not active.
         """
-        user: User | None = await user_dao.find_one_or_none(email=email)
+        try:
+            user: User = await user_dao.get_one_user(filter_by={"email": email})
+        except ObjectNotFoundException:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=StandardMessages.USER_NOT_FOUND,
+            )
 
-        if not user or not cls.verify_password(
+        if not cls.verify_password(
             plain_password=password, hashed_password=str(user.password_hash)
         ):
-            return None
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=StandardMessages.USER_NOT_FOUND,
+            )
 
         if not user.is_active:
             raise HTTPException(
@@ -105,7 +115,7 @@ class AuthService(PasswordService):
         )
         to_encode = {FieldNames.TOKEN_SUB: data, FieldNames.TOKEN_EXP: expire_time}
         auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
-        encode_jwt: str = jwt.encode(
+        encoded_jwt: str = jwt.encode(
             to_encode, auth_data.secret_key, algorithm=auth_data.algorithm
         )
-        return encode_jwt
+        return encoded_jwt

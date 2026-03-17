@@ -14,6 +14,8 @@ class StandardMessages:
     SERIALIZE_MESSAGE_ERROR: str = "Serialize message before sending error"
     RECEIVE_MESSAGE_ERROR: str = "Receive message error"
     NEW_CHAT_OF: str = "new chat of"
+    USER_NOT_FOUND: str = "user not found"
+    CHAT_NOT_FOUND: str = "chat not found"
 
 
 class FieldNames:

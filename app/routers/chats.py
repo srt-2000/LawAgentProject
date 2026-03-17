@@ -5,8 +5,10 @@ All require the current user; chats are scoped to that user.
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import ScalarResult
+from starlette import status
 
 from app.constants import BaseConstants
+from app.dao.exceptions import ObjectNotFoundException
 from app.routers.constants import RouterFieldNames, RouterStandardMessages, FieldValues
 from app.dependencies.dao import ChatDAODep
 from app.dependencies.users import CurrentUserDep
@@ -89,14 +91,16 @@ async def get_chat_by_id(
         HTTPException: 404 if chat not found or not owned by user.
     """
     chat_service: CurrentChatService = CurrentChatService(current_user.id, chat_dao)
-    chat: ChatWithMessagesDTO | None = await chat_service.get_chat_with_id(chat_id)
 
-    if chat is None:
+    try:
+        chat: ChatWithMessagesDomain = await chat_service.get_chat_with_id(chat_id)
+    except ObjectNotFoundException:
         raise HTTPException(
-            status_code=404, detail=RouterStandardMessages.CHAT_NOT_FOUND
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=RouterStandardMessages.CHAT_NOT_FOUND,
         )
 
-    return chat
+    return ChatWithMessagesDTO.model_validate(chat)
 
 
 @router.delete("/{chat_id}")

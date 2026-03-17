@@ -4,12 +4,14 @@ Generic DAO with async add, update, and delete.
 Subclass with model = YourModel to get CRUD. Each method uses its own session and commit.
 """
 
-from typing import TypeVar, Generic, Type, ClassVar, cast
+from typing import TypeVar, Generic, Type, ClassVar, cast, Sequence
 
-from sqlalchemy import delete, select, Select, Delete
+from sqlalchemy import delete, select, Select, Delete, ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result, CursorResult
+from sqlalchemy.orm.interfaces import ORMOption
 
+from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.dao.constants import DAOFieldNames
 from app.database import BaseSQLModel
@@ -27,6 +29,41 @@ class BaseDAO(Generic[T]):
 
     def __init__(self, async_session: AsyncSession) -> None:
         self._async_session = async_session
+
+    async def get_one(
+        self,
+        filter_by: dict[str, object],
+        options: Sequence[ORMOption] | None = None,
+        order_by: Sequence[ColumnElement[object]] | None = None,
+    ) -> T:
+        """Get a single object by filter criteria with related objects.
+
+        Args:
+            order_by: Order by criteria as sequence.
+            options: Options criteria as sequence.
+            filter_by: Filter criteria as field-value pairs.
+        Returns:
+            T: Founded model instance.
+        """
+        query: Select[tuple[BaseSQLModel]] = select(self.__class__.model)
+
+        if options:
+            query = query.options(*options)
+
+        query = query.filter_by(**filter_by)
+
+        if order_by:
+            query = query.order_by(*order_by)
+        else:
+            query = query.order_by(getattr(self.__class__.model, BaseConstants.ID))
+
+        result: Result[tuple[BaseSQLModel]] = await self._async_session.execute(query)
+        founded_object: BaseSQLModel | None = result.scalar_one_or_none()
+
+        if founded_object is None:
+            raise ObjectNotFoundException(self.__class__.model.__name__)
+
+        return cast(T, founded_object)
 
     async def add(self, **kwargs) -> T:
         """Add a new record to the database.
@@ -47,9 +84,7 @@ class BaseDAO(Generic[T]):
 
         return cast(T, new_instance)
 
-    async def update(
-        self, filter_by: dict[str, str | int | bool], **kwargs
-    ) -> T:
+    async def update(self, filter_by: dict[str, str | int | bool], **kwargs) -> T:
         """Update records matching the filter criteria.
 
         Args:
@@ -71,9 +106,7 @@ class BaseDAO(Generic[T]):
         updated_object: T | None = result.scalar_one_or_none()
 
         if updated_object is None:
-            raise ObjectNotFoundException(
-                self.__class__.model.__name__
-            )
+            raise ObjectNotFoundException(self.__class__.model.__name__)
 
         for key, value in kwargs.items():
             setattr(updated_object, key, value)

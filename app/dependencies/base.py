@@ -13,6 +13,7 @@ from jwt import DecodeError, ExpiredSignatureError
 
 from app.config import settings
 from app.constants import BaseConstants
+from app.dao.exceptions import ObjectNotFoundException
 from app.dependencies.constants import DependencyMessages
 from app.dependencies.dao import UserDAODep
 from app.models.models import User
@@ -87,9 +88,11 @@ async def get_current_active_user(
             detail=DependencyMessages.USER_NOT_FOUND,
         )
 
-    user: User | None = await user_dao.find_one_or_none(id=int(user_id))
-
-    if not user:
+    try:
+        user: User = await user_dao.get_one_user(
+            filter_by={BaseConstants.ID: int(user_id)}
+        )
+    except ObjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=DependencyMessages.USER_NOT_FOUND,

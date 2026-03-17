@@ -16,25 +16,19 @@ class ChatDAO(BaseDAO[Chat]):
 
     model = Chat
 
-    async def find_one_or_none_by_id(self, **kwargs) -> Chat | None:
+    async def get_one_chat(self, filter_by: dict[str, object]) -> Chat:
         """Find a single chat by filter criteria with related messages.
 
         Args:
-            **kwargs: Filter criteria as field-value pairs (e.g. id, user_id).
+            filter_by: Filter criteria as field-value pairs.
 
         Returns:
-            Chat | None: Chat instance if found, None otherwise.
+            chat: Chat instance if found, Exception otherwise.
         """
-        query: Select[tuple[Chat]] = (
-            select(self.__class__.model)
-            .options(selectinload(self.__class__.model.messages))
-            .filter_by(**kwargs)
+        chat: Chat = await self.get_one(
+            filter_by=filter_by,
+            options=[selectinload(Chat.messages)],
         )
-        result: Result[tuple[Chat]] = await self._async_session.execute(query)
-        chat: Chat | None = result.scalar_one_or_none()
-
-        if not chat:
-            return None
 
         return chat
 
@@ -47,7 +41,6 @@ class ChatDAO(BaseDAO[Chat]):
         Returns:
             ScalarResult[Chat]: Scalar result of chat instances.
         """
-
         # No options(selectinload()) because we don't need load all messages here
         query: Select[tuple[Chat]] = select(self.__class__.model).filter_by(**kwargs)
         result: Result[tuple[Chat]] = await self._async_session.execute(query)

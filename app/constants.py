@@ -13,6 +13,7 @@ class BaseConstants:
     USER_DISABLED: str = "User is disabled"
     MESSAGE_FIELD: str = "message"
     USER_ID: str = "user_id"
+    ID: str = "id"
 
 
 class ConfigFieldNames:

@@ -4,10 +4,7 @@ User Data Access Object.
 This module provides database access methods specific to User model.
 """
 
-from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy.sql import Select
-from sqlalchemy.engine import Result
 
 from app.dao.base import BaseDAO
 from app.models.models import User, Chat
@@ -18,26 +15,20 @@ class UserDAO(BaseDAO[User]):
 
     model = User
 
-    async def find_one_or_none(self, **kwargs) -> User | None:
+    async def get_one_user(self, filter_by: dict[str, object]) -> User:
         """Find a single user by filter criteria with related chats.
 
         Args:
-            **kwargs: Filter criteria as field-value pairs.
+            filter_by: Filter criteria as field-value pairs.
 
         Returns:
-            User | None: User instance if found, None otherwise.
+            User: User instance if found, Exception otherwise.
         """
-        query: Select[tuple[User]] = (
-            select(self.__class__.model)
-            .options(
+        user: User = await self.get_one(
+            filter_by=filter_by,
+            options=[
                 selectinload(self.__class__.model.chats).selectinload(Chat.messages)
-            )
-            .filter_by(**kwargs)
+            ],
         )
-        result: Result[tuple[User]] = await self._async_session.execute(query)
-        user: User | None = result.scalar_one_or_none()
-
-        if not user:
-            return None
 
         return user

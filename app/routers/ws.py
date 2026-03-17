@@ -9,6 +9,7 @@ messages and responds with a stub until RAG is connected.
 from loguru import logger
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.dao.exceptions import ObjectNotFoundException
 from app.routers.constants import RouterStandardMessages, RouterFieldNames
 from app.dependencies.chats import WebsocketCurrentUserDep
 from app.dependencies.dao import ChatDAODep, MessageDAODep
@@ -42,11 +43,11 @@ async def websocket_chat(
             await socket.close(code=4400, reason=RouterStandardMessages.INVALID_CHAT)
             return
         else:
-            current_chat_by_id: (
-                ChatWithMessagesDomain | None
-            ) = await current_chat_service.get_chat_with_id(chat_id_to_check)
-
-            if current_chat_by_id is None:
+            try:
+                current_chat_by_id: ChatWithMessagesDomain = (
+                    await current_chat_service.get_chat_with_id(chat_id_to_check)
+                )
+            except ObjectNotFoundException:
                 logger.error(RouterStandardMessages.CHAT_NOT_FOUND)
                 await socket.close(
                     code=4404, reason=RouterStandardMessages.CHAT_NOT_FOUND
@@ -71,9 +72,7 @@ async def websocket_chat(
         while True:
             message_to_receive: WebSocketMessageDomain = (
                 await chat_connection_manager.receive_message(
-                    socket,
-                    chat_id=current_chat.id,
-                    message_dao=message_dao
+                    socket, chat_id=current_chat.id, message_dao=message_dao
                 )
             )
             if message_to_receive == StandardMessages.WS_ERROR_MESSAGE:

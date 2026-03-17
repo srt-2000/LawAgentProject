@@ -16,7 +16,8 @@ from app.schemas.users import (
     ResponseUserDTO,
     RequestUserUpdateDTO,
     ResponseMessageDTO,
-    ResponseDataUserLoginDTO, AuthServiceUserDomain,
+    ResponseDataUserLoginDTO,
+    AuthServiceUserDomain,
 )
 from app.services.users import AuthService
 from app.dependencies.users import CurrentUserDep
@@ -40,32 +41,32 @@ async def register_user(
     Raises:
         HTTPException: If user with email already exists.
     """
-    check_user: User | None = await user_dao.find_one_or_none(email=new_user_data.email)
-
-    if check_user:
+    try:
+        await user_dao.get_one_user(filter_by={"email": new_user_data.email})
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=RouterStandardMessages.USER_IS_EXIST,
         )
-    new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
-        exclude={RouterFieldNames.PASSWORD_CONFIRM}
-    )
-    new_user_data_to_add[RouterFieldNames.PASSWORD_HASH] = (
-        AuthService.get_password_hash(
-            new_user_data_to_add.pop(RouterFieldNames.PASSWORD)
+    except ObjectNotFoundException:
+        new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
+            exclude={RouterFieldNames.PASSWORD_CONFIRM}
         )
-    )
-    await user_dao.add(**new_user_data_to_add)
-    message: dict[str, str] = {
-        BaseConstants.MESSAGE_FIELD: f"{new_user_data.name} {RouterStandardMessages.USER_REGISTERED}"
-    }
+        new_user_data_to_add[RouterFieldNames.PASSWORD_HASH] = (
+            AuthService.get_password_hash(
+                new_user_data_to_add.pop(RouterFieldNames.PASSWORD)
+            )
+        )
+        await user_dao.add(**new_user_data_to_add)
+        message: dict[str, str] = {
+            BaseConstants.MESSAGE_FIELD: f"{new_user_data.name} {RouterStandardMessages.USER_REGISTERED}"
+        }
     return ResponseMessageDTO.model_validate(message)
 
 
 @router.post("/login")
 async def login_user(
     response: Response, login_user_data: RequestUserAuthDTO, user_dao: UserDAODep
-) -> ResponseDataUserLoginDTO | None:
+) -> ResponseDataUserLoginDTO:
     """Authenticate user and set access token cookie.
 
     Args:
@@ -79,13 +80,13 @@ async def login_user(
     Raises:
         HTTPException: If credentials are invalid.
     """
-    check_user: AuthServiceUserDomain | None = await AuthService.authenticate_user(
-        email=login_user_data.email,
-        password=login_user_data.password,
-        user_dao=user_dao,
-    )
-
-    if check_user is None:
+    try:
+        check_user: AuthServiceUserDomain = await AuthService.authenticate_user(
+            email=login_user_data.email,
+            password=login_user_data.password,
+            user_dao=user_dao,
+        )
+    except HTTPException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=RouterStandardMessages.AUTH_DATA_NOT_CORRECT,

@@ -10,7 +10,7 @@ from fastapi import WebSocket
 from app.constants import BaseConstants
 from app.dependencies.dao import ChatDAODep
 from app.models.models import Chat
-from app.schemas.chats import ChatWithMessagesDTO, ChatWithMessagesDomain
+from app.schemas.chats import ChatWithMessagesDomain
 from app.services.message import WSMessageServiceMixin
 from app.services.constants import FieldNames, StandardMessages
 
@@ -84,9 +84,7 @@ class CurrentChatService:
             messages=[],
         )
 
-    async def get_chat_with_id(
-        self, current_chat_id: int
-    ) -> ChatWithMessagesDTO | None:
+    async def get_chat_with_id(self, current_chat_id: int) -> ChatWithMessagesDomain:
         """Load a chat by ID if it belongs to the current user.
 
         Args:
@@ -94,11 +92,12 @@ class CurrentChatService:
         Returns:
             ChatWithMessagesDTO if found and owned by user, None otherwise.
         """
-        chat: Chat | None = await self.chat_dao.find_one_or_none_by_id(
-            id=current_chat_id, user_id=self.user_id
+
+        chat: Chat = await self.chat_dao.get_one_chat(
+            filter_by={
+                BaseConstants.ID: current_chat_id,
+                BaseConstants.USER_ID: self.user_id,
+            }
         )
 
-        if chat is None:
-            return None
-
-        return ChatWithMessagesDTO.model_validate(chat)
+        return ChatWithMessagesDomain.model_validate(chat)
