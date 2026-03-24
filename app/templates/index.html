@@ -10,10 +10,13 @@
         <div class="topbar">
             <div class="topbar-left">
                 <h1 class="topbar-title">WebSocket Chat</h1>
-                <div id="status" class="disconnected">Отключено</div>
+                <div id="status" class="disconnected">DISCONNECTED</div>
             </div>
 
-            <a class="profile-link" href="/profile">Профиль</a>
+            <div class="topbar-actions">
+                <a class="profile-link" href="/profile">Profile</a>
+                <button type="button" id="logoutTopBtn" class="new-chat-btn">Logout</button>
+            </div>
         </div>
 
         <div id="app-layout">
@@ -25,7 +28,7 @@
                         type="text"
                         id="messageText"
                         autocomplete="off"
-                        placeholder="Введите сообщение..."
+                        placeholder="Enter a message..."
                         disabled
                     />
                     <button type="submit" id="sendButton" disabled>Send</button>
@@ -34,7 +37,7 @@
 
             <aside id="sidebar">
                 <div class="sidebar-header">
-                    <div class="sidebar-title">Чаты</div>
+                    <div class="sidebar-title">Chats</div>
                     <button type="button" id="newChatButton" class="new-chat-btn">New chat</button>
                 </div>
                 <ul id="chatList"></ul>
@@ -43,5 +46,17 @@
         </div>
 
         <script src="/static/scripts/scripts.js"></script>
+        <script>
+            document.getElementById("logoutTopBtn").addEventListener("click", async () => {
+                try {
+                    await fetch("/user/logout", {
+                        method: "POST",
+                        credentials: "include",
+                    });
+                } finally {
+                    window.location.href = "/login";
+                }
+            });
+        </script>
     </body>
 </html>

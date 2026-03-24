@@ -59,6 +59,12 @@ body {
     border-color: #777;
 }
 
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 #app-layout {
     display: flex;
     gap: 16px;
@@ -337,6 +343,40 @@ body.profile-body {
 
 .btn-danger:hover:not(:disabled) {
     background-color: #ff6b6b;
+    color: #ffffff;
+}
+
+.auth-wrapper {
+    padding: 24px 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 560px;
+    background: #171717;
+    border: 1px solid #333333;
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.auth-title {
+    font-size: 18px;
+    margin: 0 0 12px 0;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-form input {
+    padding: 10px 12px;
+    border: 1px solid #333333;
+    border-radius: 8px;
+    background: #0f0f0f;
     color: #ffffff;
 }
 

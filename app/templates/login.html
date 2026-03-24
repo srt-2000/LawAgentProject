@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="chat-body">
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="topbar-title">Login</div>
+        </div>
+        <a class="profile-link" href="/">Home</a>
+    </div>
+
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <h2 class="auth-title">Sign in</h2>
+            <form id="loginForm" class="auth-form">
+                <input id="loginEmail" type="email" placeholder="Email" required />
+                <input id="loginPassword" type="password" placeholder="Password" required />
+                <button type="submit">Login</button>
+            </form>
+
+            <hr class="profile-divider" />
+
+            <h2 class="auth-title">Register</h2>
+            <form id="registerForm" class="auth-form">
+                <input id="regName" type="text" placeholder="Name" required />
+                <input id="regEmail" type="email" placeholder="Email" required />
+                <input id="regPassword" type="password" placeholder="Password" required />
+                <input id="regPasswordConfirm" type="password" placeholder="Confirm password" required />
+                <button type="submit">Register</button>
+            </form>
+
+            <div id="authError" class="sidebar-hint"></div>
+        </div>
+    </div>
+
+    <script>
+        async function api(path, init) {
+            const response = await fetch(path, {
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                ...init,
+            });
+
+            const data = await response.json().catch(() => null);
+            if (!response.ok) {
+                const detail = data && (data.detail || data.message)
+                    ? (data.detail || data.message)
+                    : `HTTP ${response.status}`;
+                throw new Error(detail);
+            }
+
+            return data;
+        }
+
+        const authError = document.getElementById("authError");
+
+        document.getElementById("loginForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            authError.textContent = "";
+
+            try {
+                await api("/user/login", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        email: document.getElementById("loginEmail").value.trim(),
+                        password: document.getElementById("loginPassword").value,
+                    }),
+                });
+
+                window.location.href = "/";
+            } catch (error) {
+                authError.textContent = String(error.message || error);
+            }
+        });
+
+        document.getElementById("registerForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            authError.textContent = "";
+
+            try {
+                await api("/user/register", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        name: document.getElementById("regName").value.trim(),
+                        email: document.getElementById("regEmail").value.trim(),
+                        password: document.getElementById("regPassword").value,
+                        password_confirm: document.getElementById("regPasswordConfirm").value,
+                    }),
+                });
+
+                await api("/user/login", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        email: document.getElementById("regEmail").value.trim(),
+                        password: document.getElementById("regPassword").value,
+                    }),
+                });
+
+                window.location.href = "/";
+            } catch (error) {
+                authError.textContent = String(error.message || error);
+            }
+        });
+    </script>
+</body>
+</html>
