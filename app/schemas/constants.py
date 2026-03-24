@@ -35,11 +35,3 @@ class StandardMessages:
 
     PASSWORDS_NOT_MATCH: str = "Passwords do not match"
     PASS_CONFIRM_REQUIRE: str = "Both password and password confirm must be provided"
-
-
-class WSMessagesTypes:
-    """WS protocol message types used in Schemas payloads."""
-
-    WELCOME: Literal["welcome"] = "welcome"
-    USER: Literal["user"] = "user"
-    ASSISTANT: Literal["assistant"] = "assistant"

@@ -14,7 +14,6 @@ from app.api.routers.constants import RouterStandardMessages, RouterFieldNames
 from app.api.dependencies.chats import WebsocketCurrentUserDep
 from app.api.dependencies.dao import ChatDAODep, MessageDAODep
 from app.schemas.chats import ChatWithMessagesDomain
-from app.schemas.constants import WSMessagesTypes
 from app.schemas.messages import WebSocketMessageDomain, WebSocketMessageDTO, WSIncomingMessageDTO
 from app.services.chats import WSConnectionManager, CurrentChatService
 from app.services.constants import StandardMessages
@@ -64,7 +63,6 @@ async def websocket_chat(
 
     if new_chat_created_in_ws:
         welcome_message: WebSocketMessageDTO = WebSocketMessageDTO(
-            message_type=WSMessagesTypes.WELCOME,
             message=RouterStandardMessages.WELCOME_MESSAGE,
             chat_id=current_chat.id,
             is_bot=True,
@@ -74,27 +72,35 @@ async def websocket_chat(
 
     try:
         while True:
-            message_to_receive: WebSocketMessageDomain = (
-                await chat_connection_manager.receive_message(
+            received_message: WebSocketMessageDomain = (
+                await chat_connection_manager.receive_json(
                     socket,
                     chat_id=current_chat.id,
                     message_dao=message_dao
                 )
             )
 
-            if message_to_receive.message == StandardMessages.WS_ERROR_MESSAGE:
+            if received_message.message == StandardMessages.WS_ERROR_MESSAGE:
                 break
 
-            received_text: WSIncomingMessageDTO = WSIncomingMessageDTO(message=message_to_receive.message)
+            await chat_connection_manager.save_message(received_message, message_dao)
 
-            agent_message: WebSocketMessageDomain = WebSocketMessageDomain(
-                message_type=WSMessagesTypes.ASSISTANT,
+            received_text: WSIncomingMessageDTO = WSIncomingMessageDTO(message=received_message.message)
+
+            # agent answer dto creation and sending
+            agent_message_dto: WebSocketMessageDTO = WebSocketMessageDTO(
                 message=f"{RouterStandardMessages.STUB_MESSAGE}, {received_text.message}",
                 chat_id=current_chat.id,
                 is_bot=True,
             )
-            await chat_connection_manager.send_and_save_message(
-                socket, agent_message, message_dao
+            await chat_connection_manager.send_json(socket, agent_message_dto)
+
+            # agent answer domain creation and saving
+            agent_message_domain: WebSocketMessageDomain = WebSocketMessageDomain(
+                message=agent_message_dto.message,
+                chat_id=current_chat.id,
+                is_bot=True,
             )
+            await chat_connection_manager.save_message(agent_message_domain, message_dao)
     except WebSocketDisconnect:
         await chat_connection_manager.close_chat_connection(user.id, socket)
