@@ -41,7 +41,9 @@ class User(BaseSQLModel):
     is_active: Mapped[bool] = mapped_column(BOOLEAN, default=True, nullable=False)
 
     chats: Mapped[list["Chat"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by=lambda: (Chat.created_at.asc(), Chat.id.asc())
     )
 
     def __str__(self) -> str:
@@ -85,7 +87,9 @@ class Chat(BaseSQLModel):
 
     user: Mapped["User"] = relationship("User", back_populates="chats")
     messages: Mapped[list["Message"]] = relationship(
-        back_populates="chat", cascade="all, delete-orphan"
+        back_populates="chat",
+        cascade="all, delete-orphan",
+        order_by=lambda: (Message.created_at.asc(), Message.id.asc())
     )
 
     def __str__(self) -> str:

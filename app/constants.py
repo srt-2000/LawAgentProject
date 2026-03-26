@@ -41,3 +41,14 @@ class ConfigMessages:
 class EnvErrorsFieldNames:
     LOC: str = "loc"
     ENV_ERROR_MESSAGE: str = "msg"
+
+
+class FieldNames:
+    DETAIL: str = "detail"
+
+
+class FieldValues:
+    MAIN_PATH_NAME: str = "/"
+    PROFILE_PATH_NAME: str = "/profile"
+    LOGIN_PATH_NAME: str = "/login"
+    GET_HTTP_METHOD_NAME: str = "GET"

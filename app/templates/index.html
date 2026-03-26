@@ -1,20 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
     <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Chat</title>
-        <link rel="stylesheet" href="/static/css/styles.css">
+        <link rel="stylesheet" href="/static/css/styles.css" />
     </head>
-    <body>
-        <h1>WebSocket Chat</h1>
-        <div id="status" class="disconnected">Отключено</div>
-        <div>
-            <strong>User ID:</strong> <span id="user-id"></span>
+    <body class="chat-body">
+        <div class="topbar">
+            <div class="topbar-left">
+                <h1 class="topbar-title">WebSocket Chat</h1>
+                <div id="status" class="disconnected">DISCONNECTED</div>
+            </div>
+
+            <div class="topbar-actions">
+                <a class="profile-link" href="/profile">Profile</a>
+                <button type="button" id="logoutTopBtn" class="new-chat-btn">Logout</button>
+            </div>
         </div>
-        <ul id='messages'></ul>
-        <form action="" onsubmit="sendMessage(event)">
-            <input type="text" id="messageText" autocomplete="off" placeholder="Введите сообщение..." disabled/>
-            <button type="submit" id="sendButton" disabled>Send</button>
-        </form>
+
+        <div id="app-layout">
+            <main id="main">
+                <ul id="messages"></ul>
+
+                <form id="chatForm" action="">
+                    <input
+                        type="text"
+                        id="messageText"
+                        autocomplete="off"
+                        placeholder="Enter a message..."
+                        disabled
+                    />
+                    <button type="submit" id="sendButton" disabled>Send</button>
+                </form>
+            </main>
+
+            <aside id="sidebar">
+                <div class="sidebar-header">
+                    <div class="sidebar-title">Chats</div>
+                    <button type="button" id="newChatButton" class="new-chat-btn">New chat</button>
+                </div>
+                <ul id="chatList"></ul>
+                <div id="sidebarHint" class="sidebar-hint"></div>
+            </aside>
+        </div>
+
         <script src="/static/scripts/scripts.js"></script>
+        <script>
+            document.getElementById("logoutTopBtn").addEventListener("click", async () => {
+                try {
+                    await fetch("/user/logout", {
+                        method: "POST",
+                        credentials: "include",
+                    });
+                } finally {
+                    window.location.href = "/login";
+                }
+            });
+        </script>
     </body>
 </html>

@@ -34,6 +34,7 @@ class FieldValues:
     PAGES_TAG: str = "Pages"
     INDEX_HTML: str = "index.html"
     PROFILE_HTML: str = "profile.html"
+    LOGIN_HTML: str = "login.html"
 
 
 class RouterStandardMessages:

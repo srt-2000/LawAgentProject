@@ -15,23 +15,27 @@ router = APIRouter(tags=[FieldValues.PAGES_TAG])
 
 
 @router.get("/", response_class=HTMLResponse)
-async def get_main_page(request: Request) -> HTMLResponse:
-    """Render the main landing page.
+async def main_page(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
+    """Render the main landing page for authenticated user.
 
     Args:
         request: FastAPI request object.
+        current_user: Authenticated current user.
 
     Returns:
         HTMLResponse: Rendered index.html template.
     """
     return templates.TemplateResponse(
-        request, FieldValues.INDEX_HTML,
-        context={RouterFieldNames.REQUEST: request}
+        name=FieldValues.INDEX_HTML,
+        context={
+            RouterFieldNames.REQUEST: request,
+            RouterFieldNames.PROFILE: current_user
+        }
     )
 
 
-@router.get("/profile")
-async def get_profile(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
+@router.get("/profile", response_class=HTMLResponse)
+async def profile(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
     """Render the user profile page.
 
     Args:
@@ -43,5 +47,18 @@ async def get_profile(request: Request, current_user: CurrentUserDep) -> HTMLRes
     """
     return templates.TemplateResponse(
         name=FieldValues.PROFILE_HTML,
-        context={RouterFieldNames.REQUEST: request, RouterFieldNames.PROFILE: current_user}
+        context={
+            RouterFieldNames.REQUEST: request,
+            RouterFieldNames.PROFILE: current_user
+        }
+    )
+
+@router.get("/login", response_class=HTMLResponse)
+async def login(request: Request) -> HTMLResponse:
+    """Render the login/register page."""
+    return templates.TemplateResponse(
+        name=FieldValues.LOGIN_HTML,
+        context={
+            RouterFieldNames.REQUEST: request
+        }
     )
