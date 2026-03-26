@@ -15,7 +15,25 @@ from app.schemas.messages import WebSocketMessageDomain, WebSocketMessageDTO
 from app.services.constants import StandardMessages
 
 
-class WSMessageServiceMixin:
+class WSMessageRepositoryService:
+
+    @staticmethod
+    async def save_message(
+            message: WebSocketMessageDomain,
+            message_dao: MessageDAODep
+    ) -> None:
+        try:
+            await message_dao.add(
+                context=message.message,
+                chat_id=message.chat_id,
+                is_bot=message.is_bot
+            )
+        except Exception as error:
+            logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
+            return
+
+
+class WSMessageService(WSMessageRepositoryService):
     """Mixin for sending/receiving WebSocket messages and saving them to the database."""
 
     @staticmethod
@@ -35,9 +53,7 @@ class WSMessageServiceMixin:
             return
 
     @staticmethod
-    async def receive_json(
-        socket: WebSocket, chat_id: int, message_dao: MessageDAODep
-    ) -> WebSocketMessageDomain:
+    async def receive_json(socket: WebSocket, chat_id: int) -> WebSocketMessageDomain:
         """Receive one JSON message from the client, and return a DTO.
 
         Expects client to send {"message": "text"}. chat_id is set server-side.
@@ -46,7 +62,6 @@ class WSMessageServiceMixin:
         Args:
             socket: WebSocket connection to receive from.
             chat_id: Current chat ID (injected by server; not trusted from client).
-            message_dao: Message DAO Dependency.
 
         Returns:
             WebSocketMessageDomain: Parsed message with chat_id and is_bot=False, or error DTO on failure.
@@ -77,18 +92,3 @@ class WSMessageServiceMixin:
             return error_message_domain
 
         return received_message
-
-    @staticmethod
-    async def save_message(
-            message: WebSocketMessageDomain,
-            message_dao: MessageDAODep
-    ) -> None:
-        try:
-            await message_dao.add(
-                context=message.message,
-                chat_id=message.chat_id,
-                is_bot=message.is_bot
-            )
-        except Exception as error:
-            logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
-            return

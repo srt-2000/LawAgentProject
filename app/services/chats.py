@@ -11,11 +11,11 @@ from app.constants import BaseConstants
 from app.api.dependencies.dao import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDomain
-from app.services.message import WSMessageServiceMixin
+from app.services.message import WSMessageService
 from app.services.constants import FieldNames, StandardMessages
 
 
-class WSConnectionManager(WSMessageServiceMixin):
+class WSConnectionManager:
     """Tracks WebSocket connections per user. One user may have multiple connections."""
 
     def __init__(self) -> None:
@@ -51,7 +51,7 @@ class WSConnectionManager(WSMessageServiceMixin):
             del self.active_connections[user_id]
 
 
-class CurrentChatService:
+class CurrentChatService(WSMessageService):
     """Creates and loads chats for the current user (used by WebSocket and HTTP)."""
 
     def __init__(self, current_user_id: int, chat_dao: ChatDAODep) -> None:

@@ -13,10 +13,10 @@ function setChatIdInUrl(chatId) {
 }
 
 function wsUrlForChat(chatId) {
-    // Важно: cookies/origin одинаковые, поэтому WS под тем же хостом.
+    // Important: cookies/origin are the same, so WS uses the same host.
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    const base = `${protocol}//${host}/ws/chat`;
+    const base = `${protocol}//${host}/ws/chat/`;
     if (chatId === null || chatId === undefined) return base;
     return `${base}?chat_id=${encodeURIComponent(chatId)}`;
 }
@@ -81,7 +81,7 @@ function renderHistory(messages) {
     clearMessages();
     const list = Array.isArray(messages) ? messages.slice() : [];
 
-    // Старые -> новые
+    // Older -> newer
     list.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 
     for (const m of list) {
@@ -97,7 +97,7 @@ async function loadChatsList() {
     const payload = await apiJson("/chats/", { method: "GET" });
     const chats = payload.chat_list || [];
 
-    // Сверху вниз: от более нового created_at к более старому
+    // Sort top-to-bottom: newer `created_at` to older
     chats.sort((a, b) => {
         const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
         const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -261,7 +261,7 @@ newChatButton.addEventListener("click", async () => {
         const created = await apiJson("/chats/", { method: "POST" });
         const newId = created.id;
 
-        // Перерисуем список, чтобы появился новый чат.
+        // Re-render the list so the new chat appears.
         await loadChatsList();
 
         await openChatById(newId, true);
@@ -278,7 +278,7 @@ chatForm.addEventListener("submit", async (event) => {
     const text = (messageInput.value || "").trim();
     if (!text) return;
 
-    // Оптимистично добавляем сообщение пользователя (сервер user обратно не шлёт).
+    // Optimistically add the user message (the server doesn't echo it back as `user`).
     messagesEl.appendChild(liCreateMessage("sent", text));
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -300,7 +300,7 @@ async function init() {
     const chatIdFromUrl = qsGet("chat_id");
     const initialChatId = chatIdFromUrl ? chatIdFromUrl : chats[0].id;
 
-    // Если chatId в URL не совпадает с существующими — fallback на первый.
+    // If `chatId` from the URL doesn't match existing chats, fall back to the first one.
     const exists = chats.some((c) => String(c.id) === String(initialChatId));
     const safeChatId = exists ? initialChatId : chats[0].id;
 
