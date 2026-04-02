@@ -73,6 +73,19 @@ class DatabaseSettings(BaseAppSettings):
         )
 
 
+class RedisSettings(BaseAppSettings):
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int
+    REDIS_PASSWORD: str
+
+    @computed_field
+    def redis_url(self) -> str:
+        return (
+            f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        )
+
+
 class AuthSettings(BaseAppSettings):
     """Authentication settings: JWT secret, algorithm, and bcrypt rounds."""
 
@@ -138,6 +151,7 @@ class Settings(BaseAppSettings):
 
     database: DatabaseSettings
     auth: AuthSettings
+    redis: RedisSettings
 
 
 def get_settings() -> Settings:
@@ -150,7 +164,11 @@ def get_settings() -> Settings:
         ValidationException: If required environment variables are missing or invalid.
     """
     try:
-        project_settings = Settings(database=DatabaseSettings(), auth=AuthSettings())
+        project_settings = Settings(
+            database=DatabaseSettings(),
+            auth=AuthSettings(),
+            redis=RedisSettings()
+        )
     except ValidationException as er:
         for env_error in er.errors():
             env_name: str

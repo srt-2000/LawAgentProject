@@ -15,8 +15,14 @@ from app.api.routers.pages import router as router_pages
 from app.api.routers.users import router as router_users
 from app.api.routers.chats import router as router_chats
 from app.constants import FieldNames, FieldValues
+from app.storage.redis import lifespan
 
-app = FastAPI(title="Agent Chat", description="Law Agent Chat", version="1.0.0")
+app = FastAPI(
+    title="Agent Chat",
+    description="Law Agent Chat",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 app.mount("/static", StaticFiles(directory="app/static"), "static")
 

@@ -30,11 +30,45 @@ services:
       retries: 10
       start_period: 10s
 
+  redis:
+    image: redis:8-alpine
+    container_name: lap_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_lap:/var/lib/redis/data
+    env_file:
+      - .env
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    networks:
+      - dbnet
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: [ "CMD", "redis_cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 networks:
   dbnet:
     driver: bridge
 
 volumes:
   postgres_data_lap:
+  redis_data_lap:
 
 

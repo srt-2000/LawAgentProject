@@ -5,6 +5,8 @@ response payloads to avoid magic strings across the codebase.
 """
 
 POSTGRESQL_ASYNCPG_LINK_BEGIN: str = "postgresql+asyncpg://"
+REDIS_LINK_BEGIN: str = "redis://:"
+
 
 
 class BaseConstants:

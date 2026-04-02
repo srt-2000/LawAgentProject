@@ -5,6 +5,7 @@ User auth and profile: register, login (sets cookie), logout, me, update, disabl
 from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
+from app.api.dependencies.redis import RedisDep
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.routers.constants import RouterFieldNames, FieldValues, RouterStandardMessages
@@ -23,6 +24,12 @@ from app.services.users import AuthService
 from app.api.dependencies.users import CurrentUserDep
 
 router = APIRouter(prefix="/user", tags=[FieldValues.USER_TAG])
+
+
+@router.get("/check_redis")
+async def get_redis_ping(redis: RedisDep):
+    res = await redis.ping()
+    return {"redis ping": f"{res}"}
 
 
 @router.post("/register")
