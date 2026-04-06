@@ -23,6 +23,7 @@ class FieldValues:
     PASS_FIELD_DESCRIPTION: str = "Password, 6 to 50 characters"
     PASS_CONFIRM_DESCRIPTION: str = "Must match password"
     EMAIL_EXAMPLE: str = "user@example.com"
+    FORBID_VALUE: Literal["forbid"] = "forbid"
 
     NAME_MIN_LEN: int = 2
     EMAIL_MIN_LEN: int = 6

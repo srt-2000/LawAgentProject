@@ -6,6 +6,7 @@ Subclass with model = YourModel to get CRUD. Each method uses its own session an
 
 from typing import TypeVar, Generic, Type, ClassVar, cast, Sequence
 
+from loguru import logger
 from sqlalchemy import delete, select, Select, Delete, ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result, CursorResult
@@ -13,7 +14,7 @@ from sqlalchemy.orm.interfaces import ORMOption
 
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.dao.constants import DAOFieldNames
+from app.dao.constants import DAOFieldNames, DAOStandardMessages
 from app.database import BaseSQLModel
 
 T = TypeVar("T", bound=BaseSQLModel)
@@ -106,6 +107,7 @@ class BaseDAO(Generic[T]):
         updated_object: T | None = result.scalar_one_or_none()
 
         if updated_object is None:
+            logger.error(f"{DAOStandardMessages.UPDATE_FAILED} {filter_by}")
             raise ObjectNotFoundException(self.__class__.model.__name__)
 
         for key, value in kwargs.items():

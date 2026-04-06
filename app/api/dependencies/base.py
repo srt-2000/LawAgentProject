@@ -1,72 +1,22 @@
 """
 Shared auth logic for HTTP and WebSocket.
 
-Decode JWT from cookie, validate expiry, and load the current active user from DB.
+Load the current active user from DB.
 """
 
-from datetime import datetime, timezone
-from typing import cast
-
-import jwt
 from fastapi import HTTPException, status
-from jwt import DecodeError, ExpiredSignatureError
 
-from app.config import settings
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.dependencies.constants import DependencyMessages
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.schemas.config import AuthConfigData
-from app.schemas.dependencies import ResponsePayloadDTO
+from app.schemas.services import ResponseAccessTokenPayloadDTO
 from app.schemas.users import ResponseUserDTO
 
 
-async def decode_token(token: str) -> ResponsePayloadDTO:
-    """Decode and validate JWT token.
-
-    Args:
-        token: JWT token string to decode.
-
-    Returns:
-        ResponsePayloadDTO: Decoded and validated token payload.
-
-    Raises:
-        HTTPException: If token is invalid or expired.
-    """
-    try:
-        auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
-        payload: ResponsePayloadDTO = jwt.decode(
-            token, auth_data.secret_key, algorithms=[auth_data.algorithm]
-        )
-        valid_payload: ResponsePayloadDTO = ResponsePayloadDTO.model_validate(payload)
-    except (DecodeError, ExpiredSignatureError, Exception):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_NOT_VALID,
-        )
-
-    expire: int | None = valid_payload.exp
-
-    if expire is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_NOT_VALID,
-        )
-
-    expire_time: datetime = datetime.fromtimestamp(expire, tz=timezone.utc)
-
-    if expire_time < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_IS_EXPIRED,
-        )
-
-    return valid_payload
-
-
 async def get_current_active_user(
-    payload: ResponsePayloadDTO, user_dao: UserDAODep
+    payload: ResponseAccessTokenPayloadDTO, user_dao: UserDAODep
 ) -> ResponseUserDTO:
     """Get current active user from token payload.
 

@@ -11,7 +11,7 @@ from app.constants import BaseConstants
 from app.api.dependencies.dao import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDomain
-from app.services.message import WSMessageService
+from app.services.messages import WSMessageService
 from app.services.constants import FieldNames, StandardMessages
 
 

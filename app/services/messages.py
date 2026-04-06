@@ -16,17 +16,13 @@ from app.services.constants import StandardMessages
 
 
 class WSMessageRepositoryService:
-
     @staticmethod
     async def save_message(
-            message: WebSocketMessageDomain,
-            message_dao: MessageDAODep
+        message: WebSocketMessageDomain, message_dao: MessageDAODep
     ) -> None:
         try:
             await message_dao.add(
-                context=message.message,
-                chat_id=message.chat_id,
-                is_bot=message.is_bot
+                context=message.message, chat_id=message.chat_id, is_bot=message.is_bot
             )
         except Exception as error:
             logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
@@ -37,10 +33,7 @@ class WSMessageService(WSMessageRepositoryService):
     """Mixin for sending/receiving WebSocket messages and saving them to the database."""
 
     @staticmethod
-    async def send_json(
-            socket: WebSocket,
-            message: WebSocketMessageDTO
-    ) -> None:
+    async def send_json(socket: WebSocket, message: WebSocketMessageDTO) -> None:
         """Send a message to the client as JSON and persist it in the database."""
 
         try:

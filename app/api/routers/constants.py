@@ -26,6 +26,7 @@ class FieldValues:
     """Standard field values used in API payloads."""
 
     USERS_ACCESS_TOKEN: str = "users_access_token"
+    USERS_REFRESH_TOKEN: str = "users_refresh_token"
     LAX: Literal["lax"] = "lax"
     ROOT_PATH: str = "/"
     TEMPLATES_PATH: str = "app/templates"

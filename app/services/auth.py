@@ -4,11 +4,9 @@ User authentication and password services.
 This module provides password hashing, verification, and JWT token management.
 """
 
-from datetime import timedelta, datetime, timezone
-from typing import cast, Final
+from typing import Final
 
 import bcrypt
-import jwt
 from fastapi import HTTPException, status
 from pydantic import EmailStr
 from app.config import settings
@@ -17,7 +15,6 @@ from app.dao.exceptions import ObjectNotFoundException
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.services.constants import FieldNames, FieldsValues, StandardMessages
-from app.schemas.config import AuthConfigData
 from app.schemas.users import AuthServiceUserDomain
 
 
@@ -57,7 +54,7 @@ class PasswordService:
 
 
 class AuthService(PasswordService):
-    """Service for user authentication and token management."""
+    """Service for user authentication."""
 
     @classmethod
     async def authenticate_user(
@@ -77,7 +74,9 @@ class AuthService(PasswordService):
             HTTPException: If user account is not active.
         """
         try:
-            user: User = await user_dao.get_one_user(filter_by={"email": email})
+            user: User = await user_dao.get_one_user(
+                filter_by={FieldNames.EMAIL: email}
+            )
         except ObjectNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -99,23 +98,3 @@ class AuthService(PasswordService):
             )
 
         return AuthServiceUserDomain.model_validate(user)
-
-    @staticmethod
-    def create_access_token(data: str) -> str:
-        """Create JWT access token for user.
-
-        Args:
-            data: User ID to encode in token.
-
-        Returns:
-            str: Encoded JWT token.
-        """
-        expire_time: datetime = datetime.now(timezone.utc) + timedelta(
-            days=FieldsValues.EXP_DELTA_TIME
-        )
-        to_encode = {FieldNames.TOKEN_SUB: data, FieldNames.TOKEN_EXP: expire_time}
-        auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
-        encoded_jwt: str = jwt.encode(
-            to_encode, auth_data.secret_key, algorithm=auth_data.algorithm
-        )
-        return encoded_jwt

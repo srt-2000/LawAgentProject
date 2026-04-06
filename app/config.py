@@ -25,7 +25,9 @@ from app.constants import (
 class BaseAppSettings(BaseSettings):
     """Base for all settings classes. Loads from .env and ignores extra keys."""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=ConfigValues.ENV_FILE_NAME, extra=ConfigValues.IGNORE
+    )
 
 
 class DatabaseSettings(BaseAppSettings):
@@ -81,9 +83,7 @@ class RedisSettings(BaseAppSettings):
 
     @computed_field
     def redis_url(self) -> str:
-        return (
-            f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
-        )
+        return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
 
 class AuthSettings(BaseAppSettings):
@@ -91,6 +91,8 @@ class AuthSettings(BaseAppSettings):
 
     SECRET_KEY: str
     ALGORITHM: Literal["HS256", "HS384", "HS512"]
+    ACCESS_TOKEN_EXP_TIME_MINUTES: float
+    REFRESH_TOKEN_EXP_TIME_HOURS: float
     ROUNDS: int
 
     @field_validator(ConfigFieldNames.CRYPT_ROUNDS)
@@ -143,6 +145,8 @@ class AuthSettings(BaseAppSettings):
         return AuthConfigData(
             secret_key=self.SECRET_KEY,
             algorithm=self.ALGORITHM,
+            access_token_exp_time_minutes=self.ACCESS_TOKEN_EXP_TIME_MINUTES,
+            refresh_token_exp_time_hours=self.REFRESH_TOKEN_EXP_TIME_HOURS,
         )
 
 
@@ -165,9 +169,7 @@ def get_settings() -> Settings:
     """
     try:
         project_settings = Settings(
-            database=DatabaseSettings(),
-            auth=AuthSettings(),
-            redis=RedisSettings()
+            database=DatabaseSettings(), auth=AuthSettings(), redis=RedisSettings()
         )
     except ValidationException as er:
         for env_error in er.errors():

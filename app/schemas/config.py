@@ -17,3 +17,5 @@ class AuthConfigData(BaseModel):
 
     secret_key: str
     algorithm: str
+    access_token_exp_time_minutes: float
+    refresh_token_exp_time_hours: float

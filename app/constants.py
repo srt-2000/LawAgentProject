@@ -4,9 +4,10 @@ This module centralizes commonly used constant values for request and
 response payloads to avoid magic strings across the codebase.
 """
 
+from typing import Literal
+
 POSTGRESQL_ASYNCPG_LINK_BEGIN: str = "postgresql+asyncpg://"
 REDIS_LINK_BEGIN: str = "redis://:"
-
 
 
 class BaseConstants:
@@ -30,6 +31,8 @@ class ConfigValues:
     MIN_ROUNDS_NUMBER: int = 4
     MAX_ROUNDS_NUMBER: int = 31
     MAX_SECRET_KEY_LEN: int = 32
+    ENV_FILE_NAME: str = ".env"
+    IGNORE: Literal["ignore"] = "ignore"
 
 
 class ConfigMessages:
