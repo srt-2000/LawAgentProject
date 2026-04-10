@@ -6,6 +6,7 @@ This module provides password hashing, verification, and JWT access-token manage
 
 from typing import Final
 
+import anyio
 import bcrypt
 from fastapi import HTTPException, status
 from pydantic import EmailStr
@@ -23,6 +24,7 @@ class PasswordService:
 
     _ENCODING: Final[str] = FieldsValues.UTF_8
 
+    # It's a base sync methods to use in thread pool for async def
     @classmethod
     def get_password_hash(cls, password: str) -> str:
         """Hash a plain text password.
@@ -51,6 +53,40 @@ class PasswordService:
         return bcrypt.checkpw(
             plain_password.encode(cls._ENCODING), hashed_password.encode(cls._ENCODING)
         )
+
+    # It's async methods to use sync with thread pool
+    @classmethod
+    async def get_async_password_hash(cls, password: str) -> str:
+        """Asynchronously get a password hash.
+        Args:
+            password: Plain text password to hash.
+
+        Returns:
+            str: Hashed password.
+        """
+        async_password_hash: str = await anyio.to_thread.run_sync(
+            cls.get_password_hash, password
+        )
+
+        return async_password_hash
+
+    @classmethod
+    async def get_async_verify_password(
+        cls, plain_password: str, hashed_password: str
+    ) -> bool:
+        """Asynchronously verify a password against its hash.
+        Args:
+            plain_password: Plain text password to verify.
+            hashed_password: Hashed password to verify against.
+
+        Returns:
+            bool: True if password matches, False otherwise.
+        """
+        verify_result: bool = await anyio.to_thread.run_sync(
+            cls.verify_password, plain_password, hashed_password
+        )
+
+        return verify_result
 
 
 class AuthService(PasswordService):
@@ -83,7 +119,7 @@ class AuthService(PasswordService):
                 detail=StandardMessages.USER_NOT_FOUND,
             )
 
-        if not cls.verify_password(
+        if not await cls.get_async_verify_password(
             plain_password=password, hashed_password=str(user.password_hash)
         ):
             raise HTTPException(

@@ -29,7 +29,7 @@ async def get_websocket_current_active_user(
         ResponseUserDTO: Authenticated user data.
     """
     payload: ResponseAccessTokenPayloadDTO = (
-        await ws_access_token_service.decode_access_token(ws_access_token)
+        await ws_access_token_service.async_decode_access_token(ws_access_token)
     )
     return await get_current_active_user(payload, user_dao)
 

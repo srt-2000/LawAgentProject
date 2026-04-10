@@ -73,10 +73,10 @@ async def register_user(
         new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
             exclude={RouterFieldNames.PASSWORD_CONFIRM}
         )
-        new_user_data_to_add[RouterFieldNames.PASSWORD_HASH] = (
-            AuthService.get_password_hash(
-                new_user_data_to_add.pop(RouterFieldNames.PASSWORD)
-            )
+        new_user_data_to_add[
+            RouterFieldNames.PASSWORD_HASH
+        ] = await AuthService.get_async_password_hash(
+            new_user_data_to_add.pop(RouterFieldNames.PASSWORD)
         )
         await user_dao.add(**new_user_data_to_add)
         message: dict[str, str] = {
@@ -189,7 +189,9 @@ async def update_me(
     )
 
     if RouterFieldNames.PASSWORD in update_data:
-        update_data[RouterFieldNames.PASSWORD_HASH] = AuthService.get_password_hash(
+        update_data[
+            RouterFieldNames.PASSWORD_HASH
+        ] = await AuthService.get_async_password_hash(
             update_data.pop(RouterFieldNames.PASSWORD)
         )
 

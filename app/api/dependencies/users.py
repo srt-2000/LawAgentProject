@@ -30,7 +30,7 @@ async def get_request_current_active_user(
         ResponseUserDTO: Authenticated user data.
     """
     payload: ResponseAccessTokenPayloadDTO = (
-        await http_token_service.decode_access_token(http_access_token)
+        await http_token_service.async_decode_access_token(http_access_token)
     )
     return await get_current_active_user(payload, user_dao)
 

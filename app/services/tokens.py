@@ -7,6 +7,7 @@ used by the API and WebSocket authentication dependencies.
 
 from datetime import datetime, timezone, timedelta
 
+import anyio
 import jwt
 from fastapi import Request, HTTPException, status, WebSocket
 from jwt import DecodeError, ExpiredSignatureError
@@ -98,7 +99,7 @@ class AccessTokenService(BaseTokenService):
             )
         return current_token
 
-    async def decode_access_token(self, token: str) -> ResponseAccessTokenPayloadDTO:
+    def decode_access_token(self, token: str) -> ResponseAccessTokenPayloadDTO:
         """Decode and validate a JWT access token.
 
         Args:
@@ -140,6 +141,17 @@ class AccessTokenService(BaseTokenService):
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=StandardMessages.TOKEN_IS_EXPIRED,
             )
+
+        return valid_payload
+
+    # Put decode_access_token() in thread pool for async methods
+    async def async_decode_access_token(
+        self, token: str
+    ) -> ResponseAccessTokenPayloadDTO:
+        """Decode and validate a JWT access token in asynchronous way."""
+        valid_payload: ResponseAccessTokenPayloadDTO = await anyio.to_thread.run_sync(
+            self.decode_access_token, token
+        )
 
         return valid_payload
 
