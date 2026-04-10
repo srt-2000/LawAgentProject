@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
 from app.api.dependencies.redis import RedisDep
+from app.api.dependencies.tokens import AccessTokenServiceDep
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.routers.constants import (
@@ -28,13 +29,20 @@ from app.schemas.users import (
 )
 from app.services.auth import AuthService
 from app.api.dependencies.users import CurrentUserDep
-from app.services.tokens import AccessTokenService
 
 router = APIRouter(prefix="/user", tags=[FieldValues.USER_TAG])
 
 
 @router.get("/check_redis")
 async def get_redis_ping(redis: RedisDep) -> dict[str, str]:
+    """Ping Redis to verify connectivity.
+
+    Args:
+        redis: Redis client dependency.
+
+    Returns:
+        dict[str, str]: Ping result as a stringified boolean.
+    """
     res: bool = await cast(Awaitable[bool], redis.ping())
     return {"redis ping": f"{res}"}
 
@@ -79,14 +87,18 @@ async def register_user(
 
 @router.post("/login")
 async def login_user(
-    response: Response, login_user_data: RequestUserAuthDTO, user_dao: UserDAODep
+    response: Response,
+    login_user_data: RequestUserAuthDTO,
+    user_dao: UserDAODep,
+    access_token_service: AccessTokenServiceDep,
 ) -> ResponseDataUserLoginDTO:
-    """Authenticate user and set access token cookie.
+    """Authenticate user and set access ws_access_token cookie.
 
     Args:
         response: FastAPI response object to set cookies.
         login_user_data: User login credentials.
         user_dao: UserDAO Dependency.
+        access_token_service: TokenService Dependency.
 
     Returns:
         ResponseDataUserLoginDTO: Login response with tokens.
@@ -106,8 +118,7 @@ async def login_user(
             detail=RouterStandardMessages.AUTH_DATA_NOT_CORRECT,
         )
 
-    token_service: AccessTokenService = AccessTokenService()
-    access_token: str = token_service.create_access_token(str(check_user.id))
+    access_token: str = access_token_service.create_access_token(str(check_user.id))
 
     response.set_cookie(
         key=FieldValues.USERS_ACCESS_TOKEN,
@@ -128,7 +139,7 @@ async def login_user(
 
 @router.post("/logout")
 async def logout_user(response: Response) -> ResponseMessageDTO:
-    """Log out user by deleting access token cookie.
+    """Log out user by deleting access ws_access_token cookie.
 
     Args:
         response: FastAPI response object to delete cookies.

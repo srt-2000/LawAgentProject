@@ -8,29 +8,29 @@ from fastapi import Depends
 
 from app.api.dependencies.base import get_current_active_user
 from app.api.dependencies.dao import UserDAODep
+from app.api.dependencies.tokens import AccessTokenServiceDep, HttpAccessTokenDep
+
 from app.schemas.services import ResponseAccessTokenPayloadDTO
 from app.schemas.users import ResponseUserDTO
-from app.services.tokens import AccessTokenService
-
-
-http_token_service: AccessTokenService = AccessTokenService()
-HttpAccessToken = Annotated[str, Depends(http_token_service.get_access_token_from_http)]
 
 
 async def get_request_current_active_user(
-    user_dao: UserDAODep, token: HttpAccessToken
+    user_dao: UserDAODep,
+    http_token_service: AccessTokenServiceDep,
+    http_access_token: HttpAccessTokenDep,
 ) -> ResponseUserDTO:
-    """Get current active user from HTTP request token.
+    """Get current active user from an HTTP request access token.
 
     Args:
         user_dao: UserDAO Dependency,
-        token: JWT token from request cookies.
+        http_token_service: HTTPTokenService Dependency,
+        http_access_token: JWT access token from request cookies.
 
     Returns:
         ResponseUserDTO: Authenticated user data.
     """
     payload: ResponseAccessTokenPayloadDTO = (
-        await http_token_service.decode_access_token(token)
+        await http_token_service.decode_access_token(http_access_token)
     )
     return await get_current_active_user(payload, user_dao)
 

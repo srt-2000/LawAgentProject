@@ -1,7 +1,7 @@
 """
 User authentication and password services.
 
-This module provides password hashing, verification, and JWT token management.
+This module provides password hashing, verification, and JWT access-token management.
 """
 
 from typing import Final
@@ -68,10 +68,10 @@ class AuthService(PasswordService):
             user_dao: UserDAO Dependency.
 
         Returns:
-            AuthServiceUserDomain | None: User data if authenticated, None if invalid credentials.
+            AuthServiceUserDomain: User data if authenticated.
 
         Raises:
-            HTTPException: If user account is not active.
+            HTTPException: If credentials are invalid or account is disabled.
         """
         try:
             user: User = await user_dao.get_one_user(

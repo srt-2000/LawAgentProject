@@ -1,32 +1,44 @@
+"""
+JWT token services.
+
+This module implements helpers for creating, extracting, and decoding access tokens
+used by the API and WebSocket authentication dependencies.
+"""
+
 from datetime import datetime, timezone, timedelta
-from typing import cast
 
 import jwt
 from fastapi import Request, HTTPException, status, WebSocket
 from jwt import DecodeError, ExpiredSignatureError
 
-from app.config import settings
-from app.schemas.config import AuthConfigData
+from app.schemas.config import AuthConfigDataDomain
 from app.schemas.services import ResponseAccessTokenPayloadDTO
 from app.services.constants import FieldsValues, FieldNames, StandardMessages
 
 
 class BaseTokenService:
-    pass
+    """Base class for token services that need auth configuration."""
+
+    def __init__(self, auth_data: AuthConfigDataDomain) -> None:
+        """Initialize the service with validated auth configuration.
+
+        Args:
+            auth_data: JWT secrets, algorithm, and expiration settings.
+        """
+        self.auth_data = auth_data
 
 
 class AccessTokenService(BaseTokenService):
-    def __init__(self) -> None:
-        self.auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
+    """Service for issuing and validating JWT access tokens."""
 
     def create_access_token(self, data: str) -> str:
-        """Create JWT access token for user.
+        """Create a JWT access token.
 
         Args:
-            data: User ID to encode in token.
+            data: User ID to encode into the token subject claim.
 
         Returns:
-            str: Encoded JWT token.
+            str: Encoded JWT access token.
         """
         expire_time: datetime = datetime.now(timezone.utc) + timedelta(
             minutes=self.auth_data.access_token_exp_time_minutes
@@ -44,7 +56,7 @@ class AccessTokenService(BaseTokenService):
 
     @staticmethod
     def get_access_token_from_http(request: Request) -> str:
-        """Extract authentication token from HTTP request cookies.
+        """Extract access token from HTTP request cookies.
 
         Args:
             request: FastAPI request instance.
@@ -53,7 +65,7 @@ class AccessTokenService(BaseTokenService):
             str: JWT access token.
 
         Raises:
-            HTTPException: If token not found in cookies.
+            HTTPException: If access token not found in cookies.
         """
         current_token: str | None = request.cookies.get(FieldsValues.USERS_ACCESS_TOKEN)
 
@@ -66,7 +78,7 @@ class AccessTokenService(BaseTokenService):
 
     @staticmethod
     def get_access_token_from_websocket(storage: WebSocket) -> str:
-        """Extract JWT from the WebSocket handshake cookies.
+        """Extract access token from the WebSocket handshake cookies.
 
         Args:
             storage: WebSocket connection (cookies are taken from the handshake).
@@ -87,10 +99,10 @@ class AccessTokenService(BaseTokenService):
         return current_token
 
     async def decode_access_token(self, token: str) -> ResponseAccessTokenPayloadDTO:
-        """Decode and validate JWT token.
+        """Decode and validate a JWT access token.
 
         Args:
-            token: JWT token string to decode.
+            token: JWT access token string to decode.
 
         Returns:
             ResponseAccessTokenPayloadDTO: Decoded and validated token payload.
@@ -132,4 +144,9 @@ class AccessTokenService(BaseTokenService):
         return valid_payload
 
 
-class RefreshTokenService(BaseTokenService): ...
+class RefreshTokenService(BaseTokenService):
+    """Service for refresh-token operations.
+
+    Note:
+        Refresh token logic is not implemented yet in this project.
+    """

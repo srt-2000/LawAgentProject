@@ -18,10 +18,10 @@ from app.schemas.users import ResponseUserDTO
 async def get_current_active_user(
     payload: ResponseAccessTokenPayloadDTO, user_dao: UserDAODep
 ) -> ResponseUserDTO:
-    """Get current active user from token payload.
+    """Get current active user from a decoded access-token payload.
 
     Args:
-        payload: Decoded token payload containing user ID.
+        payload: Decoded access-token payload containing user ID.
         user_dao: UserDAO Dependency.
 
     Returns:

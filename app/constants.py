@@ -20,12 +20,17 @@ class BaseConstants:
 
 
 class ConfigFieldNames:
+    """Environment variable names used by settings validators."""
+
     DB_PORT: str = "DB_PORT"
     CRYPT_ROUNDS: str = "ROUNDS"
     SECRET_KEY: str = "SECRET_KEY"
+    REFRESH_SECRET_KEY: str = "REFRESH_SECRET_KEY"
 
 
 class ConfigValues:
+    """Constraints and default values for configuration parsing."""
+
     MIN_PORT_NUMBER: int = 1
     MAX_PORT_NUMBER: int = 65535
     MIN_ROUNDS_NUMBER: int = 4
@@ -36,23 +41,35 @@ class ConfigValues:
 
 
 class ConfigMessages:
+    """User-facing error messages for configuration validation."""
+
     PORT_NUMBER_VALUE_ERROR: str = "Port must be between 1 and 65535"
     CRYPT_ROUNDS_VALUE_ERROR: str = "BCrypt rounds must be between 4 and 31"
-    SECRET_KEY_VALUE_ERROR: str = "Secret key must be at least 32 characters long"
+    SECRET_KEY_VALUE_ERROR: str = (
+        f"Secret key and Refresh secret key must be "
+        f"at least {ConfigValues.MAX_SECRET_KEY_LEN} "
+        f"characters long"
+    )
     CONFIG_ERROR: str = "Configuration error"
     ENV_ERROR_UNKNOWN: str = "Unknown env constants validation error"
 
 
 class EnvErrorsFieldNames:
+    """Keys used by Pydantic validation error dictionaries."""
+
     LOC: str = "loc"
     ENV_ERROR_MESSAGE: str = "msg"
 
 
 class FieldNames:
+    """Standard field names used in API error payloads."""
+
     DETAIL: str = "detail"
 
 
 class FieldValues:
+    """Standard values used across routers and clients."""
+
     MAIN_PATH_NAME: str = "/"
     PROFILE_PATH_NAME: str = "/profile"
     LOGIN_PATH_NAME: str = "/login"

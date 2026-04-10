@@ -199,8 +199,8 @@ class ResponseDataUserLoginDTO(BaseModel):
 
     Attributes:
         ok: Success status.
-        access_token: JWT access token.
-        refresh_token: JWT refresh token (not yet implemented).
+        access_token: JWT access ws_access_token.
+        refresh_token: JWT refresh ws_access_token (not yet implemented).
         message: Response message.
     """
 

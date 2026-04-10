@@ -12,7 +12,7 @@ from fastapi.exceptions import ValidationException
 from pydantic import field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.schemas.config import AuthConfigData
+from app.schemas.config import AuthConfigDataDomain
 from app.constants import (
     ConfigFieldNames,
     EnvErrorsFieldNames,
@@ -76,6 +76,8 @@ class DatabaseSettings(BaseAppSettings):
 
 
 class RedisSettings(BaseAppSettings):
+    """Redis connection settings (host, port, database, credentials)."""
+
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_DB: int
@@ -83,6 +85,11 @@ class RedisSettings(BaseAppSettings):
 
     @computed_field
     def redis_url(self) -> str:
+        """Build Redis connection URL from environment settings.
+
+        Returns:
+            str: Redis URL of the form "redis://:<password>@<host>:<port>/<db>".
+        """
         return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
 
@@ -90,6 +97,7 @@ class AuthSettings(BaseAppSettings):
     """Authentication settings: JWT secret, algorithm, and bcrypt rounds."""
 
     SECRET_KEY: str
+    REFRESH_SECRET_KEY: str
     ALGORITHM: Literal["HS256", "HS384", "HS512"]
     ACCESS_TOKEN_EXP_TIME_MINUTES: float
     REFRESH_TOKEN_EXP_TIME_HOURS: float
@@ -117,7 +125,7 @@ class AuthSettings(BaseAppSettings):
             raise ValueError(ConfigMessages.CRYPT_ROUNDS_VALUE_ERROR)
         return rounds_number
 
-    @field_validator(ConfigFieldNames.SECRET_KEY)
+    @field_validator(ConfigFieldNames.SECRET_KEY, ConfigFieldNames.REFRESH_SECRET_KEY)
     @classmethod
     def validate_secret_key(cls, secret_key: str) -> str:
         """Validate secret key is not empty and has minimum length.
@@ -136,14 +144,15 @@ class AuthSettings(BaseAppSettings):
         return secret_key
 
     @computed_field  # type: ignore[prop-decorator]
-    def auth_config(self) -> AuthConfigData:
+    def auth_config(self) -> AuthConfigDataDomain:
         """Get authentication configuration data.
 
         Returns:
-            AuthConfigData: Authentication data containing secret key and algorithm.
+            AuthConfigDataDomain: Authentication data containing secret key and algorithm.
         """
-        return AuthConfigData(
+        return AuthConfigDataDomain(
             secret_key=self.SECRET_KEY,
+            refresh_secret_key=self.REFRESH_SECRET_KEY,
             algorithm=self.ALGORITHM,
             access_token_exp_time_minutes=self.ACCESS_TOKEN_EXP_TIME_MINUTES,
             refresh_token_exp_time_hours=self.REFRESH_TOKEN_EXP_TIME_HOURS,
