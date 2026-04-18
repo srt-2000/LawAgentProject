@@ -1,7 +1,8 @@
 """
 User authentication and password services.
 
-This module provides password hashing, verification, and JWT access-token management.
+Provides bcrypt hashing (sync and async) and credential validation that loads users
+from the database layer.
 """
 
 from typing import Final
@@ -15,14 +16,14 @@ from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.services.constants import FieldNames, FieldsValues, StandardMessages
+from app.services.constants import FieldNames, FieldValues, StandardMessages
 from app.schemas.users import AuthServiceUserDomain
 
 
 class PasswordService:
     """Service for password hashing and verification."""
 
-    _ENCODING: Final[str] = FieldsValues.UTF_8
+    _ENCODING: Final[str] = FieldValues.UTF_8
 
     # It's a base sync methods to use in thread pool for async def
     @classmethod
@@ -57,7 +58,8 @@ class PasswordService:
     # It's async methods to use sync with thread pool
     @classmethod
     async def get_async_password_hash(cls, password: str) -> str:
-        """Asynchronously get a password hash.
+        """Hash a password off the event loop via a worker thread.
+
         Args:
             password: Plain text password to hash.
 
@@ -74,7 +76,8 @@ class PasswordService:
     async def get_async_verify_password(
         cls, plain_password: str, hashed_password: str
     ) -> bool:
-        """Asynchronously verify a password against its hash.
+        """Verify credentials off the event loop via a worker thread.
+
         Args:
             plain_password: Plain text password to verify.
             hashed_password: Hashed password to verify against.
@@ -101,10 +104,10 @@ class AuthService(PasswordService):
         Args:
             email: User's email address.
             password: User's plain text password.
-            user_dao: UserDAO Dependency.
+            user_dao: User data access dependency.
 
         Returns:
-            AuthServiceUserDomain: User data if authenticated.
+            AuthServiceUserDomain: Authenticated user projection without secrets.
 
         Raises:
             HTTPException: If credentials are invalid or account is disabled.

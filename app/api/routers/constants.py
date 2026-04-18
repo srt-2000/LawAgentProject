@@ -15,7 +15,6 @@ class RouterFieldNames:
     PASSWORD: str = "password"
     OK: str = "ok"
     ACCESS_TOKEN: str = "access_token"
-    REFRESH_TOKEN: str = "refresh_token"
     CHAT_ID: str = "chat_id"
     ID: str = "id"
     REQUEST: str = "request"
@@ -29,6 +28,7 @@ class FieldValues:
     USERS_REFRESH_TOKEN: str = "users_refresh_token"
     LAX: Literal["lax"] = "lax"
     ROOT_PATH: str = "/"
+    REFRESH_PATH: str = "/user/refresh"
     TEMPLATES_PATH: str = "app/templates"
     USER_TAG: str = "User"
     CHATS_TAG: str = "Chats"
@@ -45,6 +45,7 @@ class RouterStandardMessages:
     AUTH_DATA_NOT_CORRECT: str = "Login or Password is not right"
     AUTH_SUCCESS: str = "Authorisation successful"
     LOGOUT_MESSAGE: str = "User is logout"
+    ACCESS_TOKEN_REFRESHED: str = "Access token refreshed"
 
     # USER messages
     USER_REGISTERED: str = "user registered successfully"

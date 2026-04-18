@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -46,17 +46,5 @@
         </div>
 
         <script src="/static/scripts/scripts.js"></script>
-        <script>
-            document.getElementById("logoutTopBtn").addEventListener("click", async () => {
-                try {
-                    await fetch("/user/logout", {
-                        method: "POST",
-                        credentials: "include",
-                    });
-                } finally {
-                    window.location.href = "/login";
-                }
-            });
-        </script>
     </body>
 </html>

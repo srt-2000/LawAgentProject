@@ -198,13 +198,25 @@ class ResponseDataUserLoginDTO(BaseModel):
     """Login response schema.
 
     Attributes:
-        ok: Success status.
-        access_token: JWT access ws_access_token.
-        refresh_token: JWT refresh ws_access_token (not yet implemented).
-        message: Response message.
+        ok: Success flag for the authentication attempt.
+        access_token: JWT access token string returned alongside cookies.
+        message: Human-readable status message.
     """
 
     ok: bool
     access_token: str
-    refresh_token: str | None
+    message: str
+
+
+class ResponseDataUserRefreshDTO(BaseModel):
+    """Refresh response schema.
+
+    Attributes:
+        ok: Success flag for the refresh operation.
+        access_token: Newly minted JWT access token string.
+        message: Human-readable status message.
+    """
+
+    ok: bool
+    access_token: str
     message: str

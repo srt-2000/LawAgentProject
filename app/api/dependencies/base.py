@@ -4,6 +4,7 @@ Shared auth logic for HTTP and WebSocket.
 Load the current active user from DB.
 """
 
+import loguru
 from fastapi import HTTPException, status
 
 from app.constants import BaseConstants
@@ -22,7 +23,7 @@ async def get_current_active_user(
 
     Args:
         payload: Decoded access-token payload containing user ID.
-        user_dao: UserDAO Dependency.
+        user_dao: User data access dependency.
 
     Returns:
         ResponseUserDTO: Current authenticated user data.
@@ -33,6 +34,7 @@ async def get_current_active_user(
     user_id: str = payload.sub
 
     if not user_id:
+        loguru.logger.exception(DependencyMessages.NO_USER_ID_IN_TOKEN)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=DependencyMessages.USER_NOT_FOUND,
@@ -43,12 +45,14 @@ async def get_current_active_user(
             filter_by={BaseConstants.ID: int(user_id)}
         )
     except ObjectNotFoundException:
+        loguru.logger.exception(DependencyMessages.USER_NOT_FOUND)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=DependencyMessages.USER_NOT_FOUND,
         )
 
     if not user.is_active:
+        loguru.logger.exception(f"{user_id} {DependencyMessages.USER_IS_NOT_ACTIVE}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=BaseConstants.USER_DISABLED
         )

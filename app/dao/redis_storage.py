@@ -1,3 +1,5 @@
+"""Redis data-access helpers for ephemeral token and session storage."""
+
 from loguru import logger
 
 from redis import RedisError
@@ -5,42 +7,63 @@ from redis.asyncio import Redis
 
 from app.dao.constants import DAOStandardMessages, DAOFieldValues, DAOFieldNames
 from app.dao.exceptions import RedisKeyValueNotFoundException
-from app.schemas.services import RedisKeyValueDomain
 
 
 class RedisDAO:
-    def __init__(self, redis: Redis):
+    """Thin async wrapper around Redis commands used by refresh-token flows."""
+
+    def __init__(self, redis: Redis) -> None:
+        """Attach an async Redis client instance.
+
+        Args:
+            redis: Connected :class:`~redis.asyncio.Redis` client.
+        """
         self._redis_session = redis
 
-    async def get_data_by_key(self, key: str) -> RedisKeyValueDomain:
+    async def get_del_data_by_key(self, key: str) -> str:
+        """Atomically read and delete the value stored under ``key``.
+
+        Args:
+            key: Redis key previously written by this DAO.
+
+        Returns:
+            str: Value that was stored at ``key`` before deletion.
+
+        Raises:
+            RedisError: If the Redis GETDEL operation fails.
+            RedisKeyValueNotFoundException: If ``key`` is absent or yields no value.
+        """
         try:
-            data: str | None = await self._redis_session.get(key)
+            deleted_data: str | None = await self._redis_session.getdel(key)
         except RedisError as error:
             logger.exception(
-                f"{DAOFieldValues.KEY_VALUE} {DAOStandardMessages.READING_FAILED} {DAOFieldNames.KEY} {key}"
+                f"{DAOFieldValues.KEY_VALUE} {DAOStandardMessages.GET_DEL_OPERATION_FAILED} {DAOFieldNames.KEY} {key}"
             )
 
             raise error
 
-        if data is None:
+        if deleted_data is None:
             logger.error(
                 f"{DAOStandardMessages.DATA_IS_NONE} {DAOFieldNames.KEY} {key}"
             )
 
             raise RedisKeyValueNotFoundException(DAOFieldValues.KEY_VALUE)
 
-        redis_key_value_domain_object: RedisKeyValueDomain = RedisKeyValueDomain(
-            key=key, value_hash=data
-        )
+        return deleted_data
 
-        return redis_key_value_domain_object
+    async def save_one(self, key: str, new_data: str, ttl: int) -> None:
+        """Persist ``new_data`` at ``key`` with a time-to-live in seconds.
 
-    async def save_one_by_key(
-        self, key: str, new_data_hash: str
-    ) -> RedisKeyValueDomain:
+        Args:
+            key: Redis key to write.
+            new_data: Serialized payload stored as the key value.
+            ttl: Expiration interval in seconds (``SET`` ``EX``).
+
+        Raises:
+            RedisError: If the Redis SET operation fails.
+        """
         try:
-            await self._redis_session.set(key, new_data_hash)
-            stored_new_data: str = await self._redis_session.get(key)
+            await self._redis_session.set(name=key, value=new_data, ex=ttl)
         except RedisError as error:
             logger.exception(
                 f"{DAOFieldValues.KEY_VALUE} {DAOStandardMessages.SAVING_FAILED} {DAOFieldNames.KEY} {key}"
@@ -48,26 +71,4 @@ class RedisDAO:
 
             raise error
 
-        if stored_new_data != new_data_hash or stored_new_data is None:
-            logger.error(
-                f"{DAOStandardMessages.SAVING_FAILED} {DAOFieldNames.KEY} {key}"
-            )
-
-            raise RedisKeyValueNotFoundException(DAOFieldValues.KEY_VALUE)
-
-        redis_key_value_domain_object: RedisKeyValueDomain = RedisKeyValueDomain(
-            key=key, value_hash=stored_new_data
-        )
-
-        return redis_key_value_domain_object
-
-    async def delete_one_by_key(self, key: str) -> int:
-        try:
-            deleted_status: int = await self._redis_session.delete(key)
-        except RedisError as error:
-            logger.exception(
-                f"{DAOStandardMessages.DELETE_FAILED} {DAOFieldNames.KEY} {key}"
-            )
-            raise error
-
-        return deleted_status
+        return

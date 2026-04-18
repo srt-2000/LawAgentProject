@@ -11,7 +11,7 @@ REDIS_LINK_BEGIN: str = "redis://:"
 
 
 class BaseConstants:
-    """Common using constants."""
+    """Application-wide shared string constants."""
 
     USER_DISABLED: str = "User is disabled"
     MESSAGE_FIELD: str = "message"
@@ -24,7 +24,7 @@ class ConfigFieldNames:
 
     DB_PORT: str = "DB_PORT"
     CRYPT_ROUNDS: str = "ROUNDS"
-    SECRET_KEY: str = "SECRET_KEY"
+    ACCESS_SECRET_KEY: str = "ACCESS_SECRET_KEY"
     REFRESH_SECRET_KEY: str = "REFRESH_SECRET_KEY"
 
 

@@ -1,14 +1,18 @@
 """
-User auth and profile: register, login (sets cookie), logout, me, update, disable.
-"""
+User authentication and profile API.
 
-from typing import cast, Awaitable
+Endpoints cover registration, login (sets cookies), logout, token refresh, current user
+profile read/update, and account disable.
+"""
 
 from fastapi import APIRouter, HTTPException, status, Response
 from pydantic import EmailStr
 
-from app.api.dependencies.redis import RedisDep
-from app.api.dependencies.tokens import AccessTokenServiceDep
+from app.api.dependencies.tokens import (
+    TokenServiceDep,
+    RefreshManagerDep,
+    HttpRefreshTokenDep,
+)
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.routers.constants import (
@@ -26,25 +30,12 @@ from app.schemas.users import (
     ResponseMessageDTO,
     ResponseDataUserLoginDTO,
     AuthServiceUserDomain,
+    ResponseDataUserRefreshDTO,
 )
 from app.services.auth import AuthService
 from app.api.dependencies.users import CurrentUserDep
 
 router = APIRouter(prefix="/user", tags=[FieldValues.USER_TAG])
-
-
-@router.get("/check_redis")
-async def get_redis_ping(redis: RedisDep) -> dict[str, str]:
-    """Ping Redis to verify connectivity.
-
-    Args:
-        redis: Redis client dependency.
-
-    Returns:
-        dict[str, str]: Ping result as a stringified boolean.
-    """
-    res: bool = await cast(Awaitable[bool], redis.ping())
-    return {"redis ping": f"{res}"}
 
 
 @router.post("/register")
@@ -55,7 +46,7 @@ async def register_user(
 
     Args:
         new_user_data: User registration data.
-        user_dao: UserDAO Dependency.
+        user_dao: User data access dependency.
 
     Returns:
         ResponseMessageDTO: Success message with username.
@@ -90,15 +81,17 @@ async def login_user(
     response: Response,
     login_user_data: RequestUserAuthDTO,
     user_dao: UserDAODep,
-    access_token_service: AccessTokenServiceDep,
+    token_service: TokenServiceDep,
+    refresh_token_manager: RefreshManagerDep,
 ) -> ResponseDataUserLoginDTO:
-    """Authenticate user and set access ws_access_token cookie.
+    """Authenticate user and set HTTP-only access and refresh token cookies.
 
     Args:
-        response: FastAPI response object to set cookies.
+        response: FastAPI response object used to set cookies.
         login_user_data: User login credentials.
-        user_dao: UserDAO Dependency.
-        access_token_service: TokenService Dependency.
+        user_dao: User data access dependency.
+        token_service: JWT access token creation and validation service.
+        refresh_token_manager: Redis-backed refresh token rotation manager.
 
     Returns:
         ResponseDataUserLoginDTO: Login response with tokens.
@@ -118,38 +111,111 @@ async def login_user(
             detail=RouterStandardMessages.AUTH_DATA_NOT_CORRECT,
         )
 
-    access_token: str = access_token_service.create_access_token(str(check_user.id))
+    access_token: str = token_service.create_access_token(str(check_user.id))
+    refresh_token: str = await refresh_token_manager.create_refresh_token(check_user.id)
 
     response.set_cookie(
         key=FieldValues.USERS_ACCESS_TOKEN,
         value=access_token,
         httponly=True,
         samesite=FieldValues.LAX,
-        secure=False,
+        secure=True,
         path=FieldValues.ROOT_PATH,
+    )
+    response.set_cookie(
+        key=FieldValues.USERS_REFRESH_TOKEN,
+        value=refresh_token,
+        httponly=True,
+        samesite=FieldValues.LAX,
+        secure=True,
+        path=FieldValues.REFRESH_PATH,
     )
     response_data = {
         RouterFieldNames.OK: True,
         RouterFieldNames.ACCESS_TOKEN: access_token,
-        RouterFieldNames.REFRESH_TOKEN: None,
         BaseConstants.MESSAGE_FIELD: RouterStandardMessages.AUTH_SUCCESS,
     }
     return ResponseDataUserLoginDTO.model_validate(response_data)
 
 
 @router.post("/logout")
-async def logout_user(response: Response) -> ResponseMessageDTO:
-    """Log out user by deleting access ws_access_token cookie.
+async def logout_user(
+    response: Response,
+    refresh_token: HttpRefreshTokenDep,
+    refresh_token_manager: RefreshManagerDep,
+) -> ResponseMessageDTO:
+    """Log out user by revoking refresh storage and clearing auth cookies.
 
     Args:
-        response: FastAPI response object to delete cookies.
+        response: FastAPI response object used to delete cookies.
+        refresh_token: Refresh token from HTTP cookies.
+        refresh_token_manager: Manager that revokes the refresh token server-side.
 
     Returns:
         ResponseMessageDTO: Logout confirmation message.
     """
-    response.delete_cookie(key=FieldValues.USERS_ACCESS_TOKEN)
-    message = {BaseConstants.MESSAGE_FIELD: RouterStandardMessages.LOGOUT_MESSAGE}
+    await refresh_token_manager.revoke_refresh_token(refresh_token)
+    response.delete_cookie(
+        key=FieldValues.USERS_ACCESS_TOKEN, path=FieldValues.ROOT_PATH
+    )
+    response.delete_cookie(
+        key=FieldValues.USERS_REFRESH_TOKEN, path=FieldValues.REFRESH_PATH
+    )
+    message: dict[str, str] = {
+        BaseConstants.MESSAGE_FIELD: RouterStandardMessages.LOGOUT_MESSAGE
+    }
     return ResponseMessageDTO.model_validate(message)
+
+
+@router.post("/refresh")
+async def refresh_access_token_session(
+    response: Response,
+    refresh_token: HttpRefreshTokenDep,
+    token_service: TokenServiceDep,
+    refresh_token_manager: RefreshManagerDep,
+) -> ResponseDataUserRefreshDTO:
+    """Rotate refresh session and issue new access and refresh token cookies.
+
+    Args:
+        response: FastAPI response object used to set cookies.
+        refresh_token: Current refresh token from HTTP cookies.
+        token_service: JWT access token creation service.
+        refresh_token_manager: Manager that validates and rotates refresh tokens.
+
+    Returns:
+        ResponseDataUserRefreshDTO: Success payload with new access token and message.
+
+    Raises:
+        HTTPException: If refresh token is invalid, expired, or storage mismatches.
+    """
+    user_id: str = await refresh_token_manager.revoke_refresh_token(refresh_token)
+    new_access_token: str = token_service.create_access_token(user_id)
+    new_refresh_token: str = await refresh_token_manager.create_refresh_token(
+        int(user_id)
+    )
+
+    response.set_cookie(
+        key=FieldValues.USERS_ACCESS_TOKEN,
+        value=new_access_token,
+        httponly=True,
+        samesite=FieldValues.LAX,
+        secure=True,
+        path=FieldValues.ROOT_PATH,
+    )
+    response.set_cookie(
+        key=FieldValues.USERS_REFRESH_TOKEN,
+        value=new_refresh_token,
+        httponly=True,
+        samesite=FieldValues.LAX,
+        secure=True,
+        path=FieldValues.REFRESH_PATH,
+    )
+    response_data = {
+        RouterFieldNames.OK: True,
+        RouterFieldNames.ACCESS_TOKEN: new_access_token,
+        BaseConstants.MESSAGE_FIELD: RouterStandardMessages.ACCESS_TOKEN_REFRESHED,
+    }
+    return ResponseDataUserRefreshDTO.model_validate(response_data)
 
 
 @router.get("/me", response_model=ResponseUserDTO)
@@ -176,7 +242,7 @@ async def update_me(
     Args:
         update_user: Fields to update.
         current_user: Authenticated current user.
-        user_dao: UserDAO Dependency.
+        user_dao: User data access dependency.
 
     Returns:
         ResponseUserDTO: Updated user data.
@@ -219,7 +285,7 @@ async def disable_me(
 
     Args:
         current_user: Authenticated current user.
-        user_dao: UserDAO Dependency.
+        user_dao: User data access dependency.
 
     Returns:
         ResponseMessageDTO: Confirmation message.

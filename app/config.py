@@ -19,6 +19,7 @@ from app.constants import (
     ConfigMessages,
     ConfigValues,
     POSTGRESQL_ASYNCPG_LINK_BEGIN,
+    REDIS_LINK_BEGIN,
 )
 
 
@@ -90,14 +91,15 @@ class RedisSettings(BaseAppSettings):
         Returns:
             str: Redis URL of the form "redis://:<password>@<host>:<port>/<db>".
         """
-        return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return f"{REDIS_LINK_BEGIN}{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
 
 class AuthSettings(BaseAppSettings):
     """Authentication settings: JWT secret, algorithm, and bcrypt rounds."""
 
-    SECRET_KEY: str
+    ACCESS_SECRET_KEY: str
     REFRESH_SECRET_KEY: str
+    REFRESH_TOKEN_ENTROPY: int
     ALGORITHM: Literal["HS256", "HS384", "HS512"]
     ACCESS_TOKEN_EXP_TIME_MINUTES: float
     REFRESH_TOKEN_EXP_TIME_HOURS: float
@@ -125,7 +127,9 @@ class AuthSettings(BaseAppSettings):
             raise ValueError(ConfigMessages.CRYPT_ROUNDS_VALUE_ERROR)
         return rounds_number
 
-    @field_validator(ConfigFieldNames.SECRET_KEY, ConfigFieldNames.REFRESH_SECRET_KEY)
+    @field_validator(
+        ConfigFieldNames.ACCESS_SECRET_KEY, ConfigFieldNames.REFRESH_SECRET_KEY
+    )
     @classmethod
     def validate_secret_key(cls, secret_key: str) -> str:
         """Validate secret key is not empty and has minimum length.
@@ -145,14 +149,16 @@ class AuthSettings(BaseAppSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     def auth_config(self) -> AuthConfigDataDomain:
-        """Get authentication configuration data.
+        """Build validated JWT configuration for token services.
 
         Returns:
-            AuthConfigDataDomain: Authentication data containing secret key and algorithm.
+            AuthConfigDataDomain: Access and refresh secrets, algorithm, entropy, and
+                token lifetimes derived from environment settings.
         """
         return AuthConfigDataDomain(
-            secret_key=self.SECRET_KEY,
+            access_secret_key=self.ACCESS_SECRET_KEY,
             refresh_secret_key=self.REFRESH_SECRET_KEY,
+            refresh_token_entropy=self.REFRESH_TOKEN_ENTROPY,
             algorithm=self.ALGORITHM,
             access_token_exp_time_minutes=self.ACCESS_TOKEN_EXP_TIME_MINUTES,
             refresh_token_exp_time_hours=self.REFRESH_TOKEN_EXP_TIME_HOURS,

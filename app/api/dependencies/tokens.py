@@ -8,11 +8,12 @@ plus small dependencies that extract access tokens from HTTP/WebSocket cookies.
 from functools import lru_cache
 from typing import Annotated, cast
 
-from fastapi import Depends, Request, WebSocket
+from fastapi import Depends, Request
 
+from app.api.dependencies.dao import RedisDAODep
 from app.config import settings
 from app.schemas.config import AuthConfigDataDomain
-from app.services.tokens import AccessTokenService, RefreshTokenService
+from app.services.tokens import TokenService, RefreshTokenSessionManager
 
 
 @lru_cache(maxsize=1)
@@ -29,35 +30,42 @@ def get_auth_config_data() -> AuthConfigDataDomain:
     return auth_config_data
 
 
-@lru_cache(maxsize=1)
-def get_access_token_service() -> AccessTokenService:
-    """Create a singleton AccessTokenService instance.
+def get_token_service() -> TokenService:
+    """Create a TokenService instance.
 
     Returns:
-        AccessTokenService: Service for creating/decoding access tokens.
+        TokenService: Service for creating/decoding/getting access and refresh tokens.
     """
     auth_data: AuthConfigDataDomain = get_auth_config_data()
-    access_token_service: AccessTokenService = AccessTokenService(auth_data)
+    token_service: TokenService = TokenService(auth_data)
 
-    return access_token_service
+    return token_service
 
 
-@lru_cache(maxsize=1)
-def get_refresh_token_service() -> RefreshTokenService:
-    """Create a singleton RefreshTokenService instance.
+TokenServiceDep = Annotated[TokenService, Depends(get_token_service)]
+
+
+def get_refresh_token_manager(
+    service: TokenServiceDep, dao: RedisDAODep
+) -> RefreshTokenSessionManager:
+    """Create a refresh-token session manager for Redis-backed rotation.
+
+    Args:
+        service: JWT token service for encoding and decoding tokens.
+        dao: Redis DAO for storing refresh token metadata by JTI.
 
     Returns:
-        RefreshTokenService: Service for refresh-token operations.
+        RefreshTokenSessionManager: Manager for create/revoke refresh flows.
     """
-    auth_data: AuthConfigDataDomain = get_auth_config_data()
-    refresh_token_service: RefreshTokenService = RefreshTokenService(auth_data)
+    refresh_manager: RefreshTokenSessionManager = RefreshTokenSessionManager(
+        service, dao
+    )
 
-    return refresh_token_service
+    return refresh_manager
 
 
-AccessTokenServiceDep = Annotated[AccessTokenService, Depends(get_access_token_service)]
-RefreshTokenServiceDep = Annotated[
-    RefreshTokenService, Depends(get_refresh_token_service)
+RefreshManagerDep = Annotated[
+    RefreshTokenSessionManager, Depends(get_refresh_token_manager)
 ]
 
 
@@ -70,24 +78,24 @@ def get_access_token_from_http(request: Request) -> str:
     Returns:
         str: Access token string.
     """
-    http_access_token: str = AccessTokenService.get_access_token_from_http(request)
+    http_access_token: str = TokenService.get_access_token_from_http(request)
 
     return http_access_token
 
 
-def get_access_token_from_websocket(websocket: WebSocket) -> str:
-    """Extract the access token from a WebSocket handshake.
+def get_refresh_token_from_http(request: Request) -> str:
+    """Extract the refresh token from an HTTP request.
 
     Args:
-        websocket: WebSocket connection (cookies are taken from the handshake).
+        request: FastAPI request carrying cookies.
 
     Returns:
-        str: Access token string.
+        str: Refresh token string.
     """
-    ws_access_token: str = AccessTokenService.get_access_token_from_websocket(websocket)
+    http_refresh_token: str = TokenService.get_refresh_token_from_http(request)
 
-    return ws_access_token
+    return http_refresh_token
 
 
 HttpAccessTokenDep = Annotated[str, Depends(get_access_token_from_http)]
-WSAccessTokenDep = Annotated[str, Depends(get_access_token_from_websocket)]
+HttpRefreshTokenDep = Annotated[str, Depends(get_refresh_token_from_http)]

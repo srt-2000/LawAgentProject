@@ -23,6 +23,20 @@ class ResponseAccessTokenPayloadDTO(BaseModel):
     exp: int | None
 
 
+class RedisRefreshTokenDTO(BaseModel):
+    """Envelope created when issuing a refresh token bound for Redis metadata.
+
+    Attributes:
+        refresh_token: Encoded refresh JWT passed to HTTP clients.
+        jti: Unique token identifier stored as the Redis key.
+        exp: Redis TTL (seconds) aligned with refresh token expiry, not the JWT ``exp`` claim.
+    """
+
+    refresh_token: str
+    jti: str
+    exp: int
+
+
 class ResponseRefreshTokenPayloadDTO(BaseModel):
     """Decoded Refresh JWT payload after verification.
 
@@ -44,10 +58,22 @@ class RedisKeyValueDomain(BaseModel):
 
     Attributes:
         key: Redis key.
-        value_hash: Stored value (typically a hash string).
+        value: Stored value (typically a hash string).
     """
 
     model_config = ConfigDict(frozen=True, extra=FieldValues.FORBID_VALUE)
 
     key: str
-    value_hash: str
+    value: str
+
+
+class SaveRedisKeyValueDomain(RedisKeyValueDomain):
+    """Redis key/value pair augmented with TTL metadata.
+
+    Attributes:
+        key: Redis key.
+        value: Stored string payload.
+        ttl: Time-to-live for the key in whole seconds (``SET EX`` semantics).
+    """
+
+    ttl: int

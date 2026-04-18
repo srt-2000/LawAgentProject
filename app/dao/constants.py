@@ -6,7 +6,7 @@ response payloads to avoid magic strings across the codebase.
 
 
 class DAOFieldNames:
-    """Standard field values used in DAO payloads."""
+    """Attribute and cursor keys used by DAO helpers."""
 
     ROWCOUNT: str = "rowcount"
     KEY: str = "key"
@@ -19,8 +19,7 @@ class DAOStandardMessages:
     DATA_IS_NONE: str = "data is NONE"
     UPDATE_FAILED: str = "update failed"
     SAVING_FAILED: str = "saving failed"
-    READING_FAILED: str = "reading from storage failed"
-    DELETE_FAILED: str = "delete failed"
+    GET_DEL_OPERATION_FAILED: str = "redis get/del operation failed"
 
 
 class DAOFieldValues:
