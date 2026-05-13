@@ -5,7 +5,7 @@ User has many Chats; Chat has many Messages. Role enum for user role.
 Cascade deletes: user -> chats -> messages.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy import Integer, String, ForeignKey, Text, BOOLEAN, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -13,7 +13,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.storage.database import BaseSQLModel
 
 
-class Role(Enum):
+class Role(StrEnum):
     """User role enumeration."""
 
     admin = "admin"

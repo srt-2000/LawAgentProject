@@ -50,7 +50,7 @@ class ResponseRefreshTokenPayloadDTO(BaseModel):
     sub: str
     exp: int
     jti: str
-    typ: Literal["refresh"] = FieldValues.REFRESH
+    typ: Literal["refresh"]
 
 
 class RedisKeyValueDomain(BaseModel):

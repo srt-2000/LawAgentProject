@@ -24,7 +24,6 @@ class FieldValues:
     PASS_CONFIRM_DESCRIPTION: str = "Must match password"
     EMAIL_EXAMPLE: str = "user@example.com"
     FORBID_VALUE: Literal["forbid"] = "forbid"
-    REFRESH: Literal["refresh"] = "refresh"
     NAME_MIN_LEN: int = 2
     EMAIL_MIN_LEN: int = 6
     PASS_MIN_LEN: int = 6
