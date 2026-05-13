@@ -9,7 +9,7 @@ from fastapi import HTTPException, status
 
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.api.dependencies.constants import DependencyMessages
+from app.api.constants import Messages
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.schemas.services import ResponseAccessTokenPayloadDTO
@@ -34,10 +34,10 @@ async def get_current_active_user(
     user_id: str = payload.sub
 
     if not user_id:
-        loguru.logger.exception(DependencyMessages.NO_USER_ID_IN_TOKEN)
+        loguru.logger.exception(Messages.NO_USER_ID_IN_TOKEN)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.USER_NOT_FOUND,
+            detail=Messages.USER_NOT_FOUND,
         )
 
     try:
@@ -45,14 +45,14 @@ async def get_current_active_user(
             filter_by={BaseConstants.ID: int(user_id)}
         )
     except ObjectNotFoundException:
-        loguru.logger.exception(DependencyMessages.USER_NOT_FOUND)
+        loguru.logger.exception(Messages.USER_NOT_FOUND)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.USER_NOT_FOUND,
+            detail=Messages.USER_NOT_FOUND,
         )
 
     if not user.is_active:
-        loguru.logger.exception(f"{user_id} {DependencyMessages.USER_IS_NOT_ACTIVE}")
+        loguru.logger.exception(f"{user_id} {Messages.USER_IS_NOT_ACTIVE}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail=BaseConstants.USER_DISABLED
         )

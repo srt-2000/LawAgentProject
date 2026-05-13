@@ -10,7 +10,7 @@ from loguru import logger
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from app.dao.exceptions import ObjectNotFoundException
-from app.api.routers.constants import RouterStandardMessages, RouterFieldNames
+from app.api.constants import Fields, Messages
 from app.api.dependencies.chats import WebsocketCurrentUserDep
 from app.api.dependencies.dao import ChatDAODep, MessageDAODep
 from app.schemas.chats import ChatWithMessagesDomain
@@ -30,7 +30,7 @@ async def websocket_chat(
     message_dao: MessageDAODep,
 ) -> None:
     """Handle a single WebSocket: create or load chat, then loop on messages with stub reply."""
-    raw_chat_id: str | None = socket.query_params.get(RouterFieldNames.CHAT_ID)
+    raw_chat_id: str | None = socket.query_params.get(Fields.CHAT_ID)
     new_chat_created_in_ws: bool = raw_chat_id is None
     current_chat_service: CurrentChatService = CurrentChatService(user.id, chat_dao)
     current_chat: ChatWithMessagesDomain
@@ -39,8 +39,8 @@ async def websocket_chat(
         try:
             chat_id_to_check: int = int(raw_chat_id)
         except ValueError as error:
-            logger.error(RouterStandardMessages.INVALID_CHAT, error)
-            await socket.close(code=4400, reason=RouterStandardMessages.INVALID_CHAT)
+            logger.error(Messages.INVALID_CHAT, error)
+            await socket.close(code=4400, reason=Messages.INVALID_CHAT)
             return
         else:
             try:
@@ -48,9 +48,9 @@ async def websocket_chat(
                     await current_chat_service.get_chat_with_id(chat_id_to_check)
                 )
             except ObjectNotFoundException:
-                logger.error(RouterStandardMessages.CHAT_NOT_FOUND)
+                logger.error(Messages.CHAT_NOT_FOUND)
                 await socket.close(
-                    code=4404, reason=RouterStandardMessages.CHAT_NOT_FOUND
+                    code=4404, reason=Messages.CHAT_NOT_FOUND
                 )
                 return
 
@@ -62,7 +62,7 @@ async def websocket_chat(
 
     if new_chat_created_in_ws:
         welcome_message: WebSocketMessageDTO = WebSocketMessageDTO(
-            message=RouterStandardMessages.WELCOME_MESSAGE,
+            message=Messages.WELCOME_MESSAGE,
             chat_id=current_chat.id,
             is_bot=True,
             )
@@ -87,7 +87,7 @@ async def websocket_chat(
 
             # agent answer domain creation and saving
             agent_message_domain: WebSocketMessageDomain = WebSocketMessageDomain(
-                message=f"{RouterStandardMessages.STUB_MESSAGE}, {received_text.message}",
+                message=f"{Messages.STUB_MESSAGE}, {received_text.message}",
                 chat_id=current_chat.id,
                 is_bot=True,
             )

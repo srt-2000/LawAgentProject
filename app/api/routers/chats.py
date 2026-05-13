@@ -9,7 +9,7 @@ from starlette import status
 
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.api.routers.constants import RouterFieldNames, RouterStandardMessages, FieldValues
+from app.api.constants import Fields, Values, Messages
 from app.api.dependencies.dao import ChatDAODep
 from app.api.dependencies.users import CurrentUserDep
 from app.models.models import Chat
@@ -22,7 +22,7 @@ from app.schemas.chats import (
 from app.schemas.users import ResponseMessageDTO
 from app.services.chats import CurrentChatService
 
-router = APIRouter(prefix="/chats", tags=[FieldValues.CHATS_TAG])
+router = APIRouter(prefix="/chats", tags=[Values.CHATS_TAG])
 
 
 @router.get("/", response_model=ChatListDTO)
@@ -97,7 +97,7 @@ async def get_chat_by_id(
     except ObjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=RouterStandardMessages.CHAT_NOT_FOUND,
+            detail=Messages.CHAT_NOT_FOUND,
         )
 
     return ChatWithMessagesDTO.model_validate(chat)
@@ -118,9 +118,9 @@ async def delete_chat_with_id(
         ResponseMessageDTO: Message with count of deleted chats.
     """
     deleted_chats_count: int = await chat_dao.delete(
-        filter_by={RouterFieldNames.ID: chat_id, BaseConstants.USER_ID: current_user.id}
+        filter_by={Fields.ID: chat_id, BaseConstants.USER_ID: current_user.id}
     )
     message: dict[str, str] = {
-        BaseConstants.MESSAGE_FIELD: f"{deleted_chats_count} {RouterStandardMessages.CHATS_DELETED}"
+        BaseConstants.MESSAGE_FIELD: f"{deleted_chats_count} {Messages.CHATS_DELETED}"
     }
     return ResponseMessageDTO.model_validate(message)

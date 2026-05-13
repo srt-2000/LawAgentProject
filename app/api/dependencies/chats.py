@@ -9,7 +9,7 @@ from loguru import logger
 from starlette.status import WS_1008_POLICY_VIOLATION
 
 from app.api.dependencies.base import get_current_active_user
-from app.api.dependencies.constants import Values, DependencyMessages
+from app.api.constants import Messages, REASON_LEN_LIMIT
 from app.api.dependencies.dao import UserDAODep
 from app.api.dependencies.tokens import TokenServiceDep
 from app.schemas.services import ResponseAccessTokenPayloadDTO
@@ -41,8 +41,8 @@ async def get_websocket_current_active_user(
             payload, user_dao
         )
     except HTTPException as exception:
-        reason: str = str(exception.detail)[: Values.REASON_LEN_LIMIT]
-        logger.warning(DependencyMessages.ERROR_GET_WS_ACTIVE_USER)
+        reason: str = str(exception.detail)[: REASON_LEN_LIMIT]
+        logger.warning(Messages.ERROR_GET_WS_ACTIVE_USER)
         raise WebSocketException(
             code=WS_1008_POLICY_VIOLATION,
             reason=reason,

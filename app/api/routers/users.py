@@ -15,11 +15,7 @@ from app.api.dependencies.tokens import (
 )
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.api.routers.constants import (
-    RouterFieldNames,
-    FieldValues,
-    RouterStandardMessages,
-)
+from app.api.constants import Fields, Values, Messages, LAX, ROOT_PATH, REFRESH_PATH
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.schemas.users import (
@@ -35,7 +31,7 @@ from app.schemas.users import (
 from app.services.auth import AuthService
 from app.api.dependencies.users import CurrentUserDep
 
-router = APIRouter(prefix="/user", tags=[FieldValues.USER_TAG])
+router = APIRouter(prefix="/user", tags=[Values.USER_TAG])
 
 
 @router.post("/register")
@@ -58,20 +54,20 @@ async def register_user(
         await user_dao.get_one_user(filter_by={"email": new_user_data.email})
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=RouterStandardMessages.USER_IS_EXIST,
+            detail=Messages.USER_IS_EXIST,
         )
     except ObjectNotFoundException:
         new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
-            exclude={RouterFieldNames.PASSWORD_CONFIRM}
+            exclude={Fields.PASSWORD_CONFIRM}
         )
         new_user_data_to_add[
-            RouterFieldNames.PASSWORD_HASH
+            Fields.PASSWORD_HASH
         ] = await AuthService.get_async_password_hash(
-            new_user_data_to_add.pop(RouterFieldNames.PASSWORD)
+            new_user_data_to_add.pop(Fields.PASSWORD)
         )
         await user_dao.add(**new_user_data_to_add)
         message: dict[str, str] = {
-            BaseConstants.MESSAGE_FIELD: f"{new_user_data.name} {RouterStandardMessages.USER_REGISTERED}"
+            BaseConstants.MESSAGE_FIELD: f"{new_user_data.name} {Messages.USER_REGISTERED}"
         }
     return ResponseMessageDTO.model_validate(message)
 
@@ -108,32 +104,32 @@ async def login_user(
     except HTTPException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=RouterStandardMessages.AUTH_DATA_NOT_CORRECT,
+            detail=Messages.AUTH_DATA_NOT_CORRECT,
         )
 
     access_token: str = token_service.create_access_token(str(check_user.id))
     refresh_token: str = await refresh_token_manager.create_refresh_token(check_user.id)
 
     response.set_cookie(
-        key=FieldValues.USERS_ACCESS_TOKEN,
+        key=Values.USERS_ACCESS_TOKEN,
         value=access_token,
         httponly=True,
-        samesite=FieldValues.LAX,
+        samesite=LAX,
         secure=True,
-        path=FieldValues.ROOT_PATH,
+        path=ROOT_PATH,
     )
     response.set_cookie(
-        key=FieldValues.USERS_REFRESH_TOKEN,
+        key=Values.USERS_REFRESH_TOKEN,
         value=refresh_token,
         httponly=True,
-        samesite=FieldValues.LAX,
+        samesite=LAX,
         secure=True,
-        path=FieldValues.REFRESH_PATH,
+        path=REFRESH_PATH,
     )
     response_data = {
-        RouterFieldNames.OK: True,
-        RouterFieldNames.ACCESS_TOKEN: access_token,
-        BaseConstants.MESSAGE_FIELD: RouterStandardMessages.AUTH_SUCCESS,
+        Fields.OK: True,
+        Fields.ACCESS_TOKEN: access_token,
+        BaseConstants.MESSAGE_FIELD: Messages.AUTH_SUCCESS,
     }
     return ResponseDataUserLoginDTO.model_validate(response_data)
 
@@ -156,13 +152,13 @@ async def logout_user(
     """
     await refresh_token_manager.revoke_refresh_token(refresh_token)
     response.delete_cookie(
-        key=FieldValues.USERS_ACCESS_TOKEN, path=FieldValues.ROOT_PATH
+        key=Values.USERS_ACCESS_TOKEN, path=ROOT_PATH
     )
     response.delete_cookie(
-        key=FieldValues.USERS_REFRESH_TOKEN, path=FieldValues.REFRESH_PATH
+        key=Values.USERS_REFRESH_TOKEN, path=REFRESH_PATH
     )
     message: dict[str, str] = {
-        BaseConstants.MESSAGE_FIELD: RouterStandardMessages.LOGOUT_MESSAGE
+        BaseConstants.MESSAGE_FIELD: Messages.LOGOUT_MESSAGE
     }
     return ResponseMessageDTO.model_validate(message)
 
@@ -195,25 +191,25 @@ async def refresh_access_token_session(
     )
 
     response.set_cookie(
-        key=FieldValues.USERS_ACCESS_TOKEN,
+        key=Values.USERS_ACCESS_TOKEN,
         value=new_access_token,
         httponly=True,
-        samesite=FieldValues.LAX,
+        samesite=LAX,
         secure=True,
-        path=FieldValues.ROOT_PATH,
+        path=ROOT_PATH,
     )
     response.set_cookie(
-        key=FieldValues.USERS_REFRESH_TOKEN,
+        key=Values.USERS_REFRESH_TOKEN,
         value=new_refresh_token,
         httponly=True,
-        samesite=FieldValues.LAX,
+        samesite=LAX,
         secure=True,
-        path=FieldValues.REFRESH_PATH,
+        path=REFRESH_PATH,
     )
     response_data = {
-        RouterFieldNames.OK: True,
-        RouterFieldNames.ACCESS_TOKEN: new_access_token,
-        BaseConstants.MESSAGE_FIELD: RouterStandardMessages.ACCESS_TOKEN_REFRESHED,
+        Fields.OK: True,
+        Fields.ACCESS_TOKEN: new_access_token,
+        BaseConstants.MESSAGE_FIELD: Messages.ACCESS_TOKEN_REFRESHED,
     }
     return ResponseDataUserRefreshDTO.model_validate(response_data)
 
@@ -251,25 +247,25 @@ async def update_me(
         HTTPException: If user not found after update.
     """
     update_data: dict[str, str | EmailStr] = update_user.model_dump(
-        exclude_none=True, exclude={RouterFieldNames.PASSWORD_CONFIRM}
+        exclude_none=True, exclude={Fields.PASSWORD_CONFIRM}
     )
 
-    if RouterFieldNames.PASSWORD in update_data:
+    if Fields.PASSWORD in update_data:
         update_data[
-            RouterFieldNames.PASSWORD_HASH
+            Fields.PASSWORD_HASH
         ] = await AuthService.get_async_password_hash(
-            update_data.pop(RouterFieldNames.PASSWORD)
+            update_data.pop(Fields.PASSWORD)
         )
 
     if update_data:
         try:
             updated_user: User = await user_dao.update(
-                filter_by={RouterFieldNames.ID: current_user.id}, **update_data
+                filter_by={Fields.ID: current_user.id}, **update_data
             )
         except ObjectNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=RouterStandardMessages.USER_NOT_FOUND,
+                detail=Messages.USER_NOT_FOUND,
             )
 
         return ResponseUserDTO.model_validate(updated_user)
@@ -292,19 +288,19 @@ async def disable_me(
     """
     try:
         disabled_user: User = await user_dao.update(
-            filter_by={RouterFieldNames.ID: current_user.id}, is_active=False
+            filter_by={Fields.ID: current_user.id}, is_active=False
         )
 
         if disabled_user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=RouterStandardMessages.USER_NOT_DISABLED,
+                detail=Messages.USER_NOT_DISABLED,
             )
 
     except ObjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=RouterStandardMessages.USER_NOT_FOUND,
+            detail=Messages.USER_NOT_FOUND,
         )
 
     message: dict[str, str] = {
