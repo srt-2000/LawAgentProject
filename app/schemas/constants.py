@@ -4,34 +4,34 @@ This module centralizes commonly used constant values for request and
 response payloads to avoid magic strings across the codebase.
 """
 
+from enum import StrEnum
 from typing import Literal
 
 
-class FieldNames:
-    """Standard field names used in Schemas payloads."""
+# FIELDS names
+TITLE: str = "title"
 
-    TITLE: str = "title"
+# VALUES
+BEFORE_MODE: Literal["before"] = "before"
+AFTER_MODE: Literal["after"] = "after"
+FORBID_VALUE: Literal["forbid"] = "forbid"
+NAME_MIN_LEN: int = 2
+PASS_MIN_LEN: int = 6
+MAX_FIELD_LEN: int = 50
 
 
-class FieldValues:
+class Descriptions(StrEnum):
     """Standard field values used in Schemas payloads."""
 
-    BEFORE_MODE: Literal["before"] = "before"
-    AFTER_MODE: Literal["after"] = "after"
-    NAME_FIELD_DESCRIPTION: str = "Display name, 2 to 50 characters"
-    EMAIL_FIELD_DESCRIPTION: str = "Email"
-    PASS_FIELD_DESCRIPTION: str = "Password, 6 to 50 characters"
-    PASS_CONFIRM_DESCRIPTION: str = "Must match password"
-    EMAIL_EXAMPLE: str = "user@example.com"
-    FORBID_VALUE: Literal["forbid"] = "forbid"
-    NAME_MIN_LEN: int = 2
-    EMAIL_MIN_LEN: int = 6
-    PASS_MIN_LEN: int = 6
-    MAX_FIELD_LEN: int = 50
+    NAME_FIELD_DESCRIPTION = "Display name, 2 to 50 characters"
+    EMAIL_FIELD_DESCRIPTION = "Email"
+    PASS_FIELD_DESCRIPTION = "Password, 6 to 50 characters"
+    PASS_CONFIRM_DESCRIPTION = "Must match password"
+    EMAIL_EXAMPLE = "user@example.com"
 
 
-class StandardMessages:
+class Messages(StrEnum):
     """Standard message values used in Schemas payloads."""
 
-    PASSWORDS_NOT_MATCH: str = "Passwords do not match"
-    PASS_CONFIRM_REQUIRE: str = "Both password and password confirm must be provided"
+    PASSWORDS_NOT_MATCH = "Passwords do not match"
+    PASS_CONFIRM_REQUIRE = "Both password and password confirm must be provided"

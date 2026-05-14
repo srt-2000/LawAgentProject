@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from app.schemas.constants import FieldValues
+from app.schemas.constants import FORBID_VALUE
 
 
 class ResponseAccessTokenPayloadDTO(BaseModel):
@@ -61,7 +61,7 @@ class RedisKeyValueDomain(BaseModel):
         value: Stored value (typically a hash string).
     """
 
-    model_config = ConfigDict(frozen=True, extra=FieldValues.FORBID_VALUE)
+    model_config = ConfigDict(frozen=True, extra=FORBID_VALUE)
 
     key: str
     value: str
