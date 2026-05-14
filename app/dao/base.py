@@ -16,7 +16,7 @@ from sqlalchemy.orm.interfaces import ORMOption
 
 from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.dao.constants import DAOFieldNames, DAOStandardMessages
+from app.dao.constants import ROWCOUNT, Messages
 from app.storage.database import BaseSQLModel
 
 T = TypeVar("T", bound=BaseSQLModel)
@@ -110,7 +110,7 @@ class BaseDAO(Generic[T]):
         updated_object: T | None = result.scalar_one_or_none()
 
         if updated_object is None:
-            logger.error(f"{DAOStandardMessages.UPDATE_FAILED} {filter_by}")
+            logger.error(f"{Messages.UPDATE_FAILED} {filter_by}")
             raise ObjectNotFoundException(self.__class__.model.__name__)
 
         for key, value in kwargs.items():
@@ -135,5 +135,5 @@ class BaseDAO(Generic[T]):
         result: Result[tuple[T]] = await self._async_session.execute(query)
         cursor_result: CursorResult[tuple[T]] = cast(CursorResult[tuple[T]], result)
 
-        rows_affected: int = int(getattr(cursor_result, DAOFieldNames.ROWCOUNT))
+        rows_affected: int = int(getattr(cursor_result, ROWCOUNT))
         return rows_affected

@@ -5,7 +5,7 @@ from loguru import logger
 from redis import RedisError
 from redis.asyncio import Redis
 
-from app.dao.constants import DAOStandardMessages, DAOFieldValues, DAOFieldNames
+from app.dao.constants import Messages, KEY_VALUE, KEY
 from app.dao.exceptions import RedisKeyValueNotFoundException
 
 
@@ -30,24 +30,22 @@ class RedisDAO:
             str: Value that was stored at ``key`` before deletion.
 
         Raises:
-            RedisError: If the Redis GETDEL operation fails.
+            RedisError: If the Redis GET/DEL operation fails.
             RedisKeyValueNotFoundException: If ``key`` is absent or yields no value.
         """
         try:
             deleted_data: str | None = await self._redis_session.getdel(key)
         except RedisError as error:
             logger.exception(
-                f"{DAOFieldValues.KEY_VALUE} {DAOStandardMessages.GET_DEL_OPERATION_FAILED} {DAOFieldNames.KEY} {key}"
+                f"{KEY_VALUE} {Messages.GET_DEL_OPERATION_FAILED} {KEY} {key}"
             )
 
             raise error
 
         if deleted_data is None:
-            logger.error(
-                f"{DAOStandardMessages.DATA_IS_NONE} {DAOFieldNames.KEY} {key}"
-            )
+            logger.error(f"{Messages.DATA_IS_NONE} {KEY} {key}")
 
-            raise RedisKeyValueNotFoundException(DAOFieldValues.KEY_VALUE)
+            raise RedisKeyValueNotFoundException(KEY_VALUE)
 
         return deleted_data
 
@@ -65,9 +63,7 @@ class RedisDAO:
         try:
             await self._redis_session.set(name=key, value=new_data, ex=ttl)
         except RedisError as error:
-            logger.exception(
-                f"{DAOFieldValues.KEY_VALUE} {DAOStandardMessages.SAVING_FAILED} {DAOFieldNames.KEY} {key}"
-            )
+            logger.exception(f"{KEY_VALUE} {Messages.SAVING_FAILED} {KEY} {key}")
 
             raise error
 

@@ -4,25 +4,22 @@ This module centralizes commonly used constant values for request and
 response payloads to avoid magic strings across the codebase.
 """
 
-
-class DAOFieldNames:
-    """Attribute and cursor keys used by DAO helpers."""
-
-    ROWCOUNT: str = "rowcount"
-    KEY: str = "key"
+from enum import StrEnum
 
 
-class DAOStandardMessages:
+# FIELDS names
+ROWCOUNT = "rowcount"
+KEY = "key"
+
+# VALUES
+KEY_VALUE: str = "KEY_VALUE"
+
+
+class Messages(StrEnum):
     """Standard messages used in DAO payloads."""
 
-    OBJECT_NOT_FOUND: str = "object not found"
-    DATA_IS_NONE: str = "data is NONE"
-    UPDATE_FAILED: str = "update failed"
-    SAVING_FAILED: str = "saving failed"
-    GET_DEL_OPERATION_FAILED: str = "redis get/del operation failed"
-
-
-class DAOFieldValues:
-    """Standard field values used in DAO payloads."""
-
-    KEY_VALUE: str = "KEY_VALUE"
+    OBJECT_NOT_FOUND = "object not found"
+    DATA_IS_NONE = "data is NONE"
+    UPDATE_FAILED = "update failed"
+    SAVING_FAILED = "saving failed"
+    GET_DEL_OPERATION_FAILED = "redis get/del operation failed"

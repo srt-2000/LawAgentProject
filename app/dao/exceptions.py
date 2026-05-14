@@ -1,4 +1,4 @@
-from app.dao.constants import DAOStandardMessages
+from app.dao.constants import Messages
 
 
 class ObjectNotFoundException(Exception):
@@ -12,7 +12,7 @@ class ObjectNotFoundException(Exception):
         """
 
         self.model_name: str = model_name
-        super().__init__(f"{model_name} {DAOStandardMessages.OBJECT_NOT_FOUND}")
+        super().__init__(f"{model_name} {Messages.OBJECT_NOT_FOUND}")
 
 
 class RedisKeyValueNotFoundException(Exception):
@@ -26,4 +26,4 @@ class RedisKeyValueNotFoundException(Exception):
         """
 
         self.record_type_name: str = record_type_name
-        super().__init__(f"{record_type_name} {DAOStandardMessages.DATA_IS_NONE}")
+        super().__init__(f"{record_type_name} {Messages.DATA_IS_NONE}")
