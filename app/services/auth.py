@@ -12,18 +12,17 @@ import bcrypt
 from fastapi import HTTPException, status
 from pydantic import EmailStr
 from app.config import settings
-from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.services.constants import FieldNames, FieldValues, StandardMessages
+from app.services.constants import Fields, UTF_8, Messages
 from app.schemas.users import AuthServiceUserDomain
 
 
 class PasswordService:
     """Service for password hashing and verification."""
 
-    _ENCODING: Final[str] = FieldValues.UTF_8
+    _ENCODING: Final[str] = UTF_8
 
     # It's a base sync methods to use in thread pool for async def
     @classmethod
@@ -113,13 +112,11 @@ class AuthService(PasswordService):
             HTTPException: If credentials are invalid or account is disabled.
         """
         try:
-            user: User = await user_dao.get_one_user(
-                filter_by={FieldNames.EMAIL: email}
-            )
+            user: User = await user_dao.get_one_user(filter_by={Fields.EMAIL: email})
         except ObjectNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.USER_NOT_FOUND,
+                detail=Messages.USER_NOT_FOUND,
             )
 
         if not await cls.get_async_verify_password(
@@ -127,13 +124,13 @@ class AuthService(PasswordService):
         ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.USER_NOT_FOUND,
+                detail=Messages.USER_NOT_FOUND,
             )
 
         if not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=BaseConstants.USER_DISABLED,
+                detail=Messages.USER_DISABLED,
             )
 
         return AuthServiceUserDomain.model_validate(user)

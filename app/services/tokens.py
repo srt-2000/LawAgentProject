@@ -23,7 +23,13 @@ from app.schemas.services import (
     RedisRefreshTokenDTO,
     ResponseRefreshTokenPayloadDTO,
 )
-from app.services.constants import FieldValues, FieldNames, StandardMessages
+from app.services.constants import (
+    Fields,
+    Messages,
+    REFRESH,
+    USERS_ACCESS_TOKEN,
+    USERS_REFRESH_TOKEN,
+)
 
 
 class TokenService:
@@ -50,8 +56,8 @@ class TokenService:
             minutes=self.auth_data.access_token_exp_time_minutes
         )
         to_encode: dict[str, str | datetime] = {
-            FieldNames.TOKEN_SUB: user_id,
-            FieldNames.TOKEN_EXP: expire_time,
+            Fields.TOKEN_SUB: user_id,
+            Fields.TOKEN_EXP: expire_time,
         }
         encoded_jwt: str = jwt.encode(
             payload=to_encode,
@@ -75,10 +81,10 @@ class TokenService:
         )
 
         to_encode: dict[str, str | datetime | Literal["refresh"]] = {
-            FieldNames.TOKEN_SUB: str(user_id),
-            FieldNames.TOKEN_EXP: expire_time,
-            FieldNames.REFRESH_TOKEN_JTI: jti,
-            FieldNames.REFRESH_TOKEN_TYPE: FieldValues.REFRESH,
+            Fields.TOKEN_SUB: str(user_id),
+            Fields.TOKEN_EXP: expire_time,
+            Fields.REFRESH_TOKEN_JTI: jti,
+            Fields.REFRESH_TOKEN_TYPE: REFRESH,
         }
         encoded_jwt: str = jwt.encode(
             payload=to_encode,
@@ -117,7 +123,7 @@ class TokenService:
         except (DecodeError, ExpiredSignatureError, Exception):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.TOKEN_NOT_VALID,
+                detail=Messages.TOKEN_NOT_VALID,
             )
 
         expire: int | None = valid_payload.exp
@@ -125,7 +131,7 @@ class TokenService:
         if expire is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.TOKEN_NOT_VALID,
+                detail=Messages.TOKEN_NOT_VALID,
             )
 
         expire_time: datetime = datetime.fromtimestamp(expire, tz=timezone.utc)
@@ -133,7 +139,7 @@ class TokenService:
         if expire_time < datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.TOKEN_IS_EXPIRED,
+                detail=Messages.TOKEN_IS_EXPIRED,
             )
 
         return valid_payload
@@ -162,17 +168,17 @@ class TokenService:
                 ResponseRefreshTokenPayloadDTO.model_validate(payload)
             )
         except (DecodeError, ExpiredSignatureError, Exception):
-            loguru.logger.exception(StandardMessages.REFRESH_TOKEN_DECODE_ERROR)
+            loguru.logger.exception(Messages.REFRESH_TOKEN_DECODE_ERROR)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.REFRESH_TOKEN_IS_NOT_VALID,
+                detail=Messages.REFRESH_TOKEN_IS_NOT_VALID,
             )
 
-        if valid_payload.typ != FieldValues.REFRESH:
-            loguru.logger.exception(StandardMessages.INVALID_TOKEN_TYPE)
+        if valid_payload.typ != REFRESH:
+            loguru.logger.exception(Messages.INVALID_TOKEN_TYPE)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.INVALID_TOKEN_TYPE,
+                detail=Messages.INVALID_TOKEN_TYPE,
             )
 
         return valid_payload
@@ -190,12 +196,12 @@ class TokenService:
         Raises:
             HTTPException: If access token not found in cookies.
         """
-        current_token: str | None = request.cookies.get(FieldValues.USERS_ACCESS_TOKEN)
+        current_token: str | None = request.cookies.get(USERS_ACCESS_TOKEN)
 
         if not current_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.TOKEN_NOT_VALID,
+                detail=Messages.TOKEN_NOT_VALID,
             )
         return current_token
 
@@ -212,12 +218,12 @@ class TokenService:
         Raises:
             HTTPException: 401 if cookie "users_access_token" is missing.
         """
-        current_token: str | None = storage.cookies.get(FieldValues.USERS_ACCESS_TOKEN)
+        current_token: str | None = storage.cookies.get(USERS_ACCESS_TOKEN)
 
         if not current_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.TOKEN_NOT_VALID,
+                detail=Messages.TOKEN_NOT_VALID,
             )
         return current_token
 
@@ -234,12 +240,12 @@ class TokenService:
         Raises:
             HTTPException: If refresh token cookie is missing or empty.
         """
-        current_token: str | None = request.cookies.get(FieldValues.USERS_REFRESH_TOKEN)
+        current_token: str | None = request.cookies.get(USERS_REFRESH_TOKEN)
 
         if not current_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.TOKEN_NOT_VALID,
+                detail=Messages.TOKEN_NOT_VALID,
             )
         return current_token
 
@@ -297,16 +303,16 @@ class RefreshTokenSessionManager:
         except RedisKeyValueNotFoundException:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=StandardMessages.REFRESH_TOKEN_REDIS_ERROR,
+                detail=Messages.REFRESH_TOKEN_REDIS_ERROR,
             )
 
         if deleted_user_id != payload_dto.sub:
             loguru.logger.exception(
-                f"{StandardMessages.REFRESH_TOKEN_REDIS_ERROR} {StandardMessages.USER_ID_DONT_MATCH}"
+                f"{Messages.REFRESH_TOKEN_REDIS_ERROR} {Messages.USER_ID_DONT_MATCH}"
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=StandardMessages.REVOKE_REFRESH_TOKEN_ERROR,
+                detail=Messages.REVOKE_REFRESH_TOKEN_ERROR,
             )
 
         return deleted_user_id

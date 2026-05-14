@@ -9,10 +9,9 @@ from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
 from loguru import logger
 
-from app.constants import BaseConstants
 from app.api.dependencies.dao import MessageDAODep
 from app.schemas.messages import WebSocketMessageDomain, WebSocketMessageDTO
-from app.services.constants import StandardMessages
+from app.services.constants import Messages, Fields
 
 
 class WSMessageRepositoryService:
@@ -25,7 +24,7 @@ class WSMessageRepositoryService:
                 context=message.message, chat_id=message.chat_id, is_bot=message.is_bot
             )
         except Exception as error:
-            logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
+            logger.error(f"{Messages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
             return
 
 
@@ -42,7 +41,7 @@ class WSMessageService(WSMessageRepositoryService):
         except WebSocketDisconnect:
             raise
         except Exception as error:
-            logger.error(f"{StandardMessages.SEND_MESSAGE_ERROR} {error}")
+            logger.error(f"{Messages.SEND_MESSAGE_ERROR} {error}")
             return
 
     @staticmethod
@@ -60,7 +59,7 @@ class WSMessageService(WSMessageRepositoryService):
             WebSocketMessageDomain: Parsed message with chat_id and is_bot=False, or error DTO on failure.
         """
         error_message_domain: WebSocketMessageDomain = WebSocketMessageDomain(
-            message=StandardMessages.WS_ERROR_MESSAGE,
+            message=Messages.WS_ERROR_MESSAGE,
             chat_id=chat_id,
             is_bot=False,
         )
@@ -70,18 +69,18 @@ class WSMessageService(WSMessageRepositoryService):
         except WebSocketDisconnect:
             raise
         except Exception as error:
-            logger.error(f"{StandardMessages.RECEIVE_MESSAGE_ERROR} {error}")
+            logger.error(f"{Messages.RECEIVE_MESSAGE_ERROR} {error}")
             return error_message_domain
 
         try:
-            received_text: str | None = message.get(BaseConstants.MESSAGE_FIELD)
+            received_text: str | None = message.get(Fields.MESSAGE)
             received_message: WebSocketMessageDomain = WebSocketMessageDomain(
                 message=received_text,
                 chat_id=chat_id,
                 is_bot=False,
             )
         except Exception as error:
-            logger.error(f"{StandardMessages.SERIALIZE_MESSAGE_ERROR} {error}")
+            logger.error(f"{Messages.SERIALIZE_MESSAGE_ERROR} {error}")
             return error_message_domain
 
         return received_message

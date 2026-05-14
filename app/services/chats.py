@@ -12,7 +12,7 @@ from app.api.dependencies.dao import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDomain
 from app.services.messages import WSMessageService
-from app.services.constants import FieldNames, StandardMessages
+from app.services.constants import Fields, Messages
 
 
 class WSConnectionManager:
@@ -71,7 +71,7 @@ class CurrentChatService(WSMessageService):
             ChatWithMessagesDTO: New chat with id, title, user_id, created_at, messages=[].
         """
         data_to_create_new_chat: dict[str, str | int] = {
-            FieldNames.TITLE: f"{StandardMessages.NEW_CHAT_OF} {self.user_id}",
+            Fields.TITLE: f"{Messages.NEW_CHAT_OF} {self.user_id}",
             BaseConstants.USER_ID: self.user_id,
         }
         new_chat: Chat = await self.chat_dao.add(**data_to_create_new_chat)
