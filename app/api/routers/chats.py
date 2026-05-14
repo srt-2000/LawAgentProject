@@ -7,7 +7,6 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import ScalarResult
 from starlette import status
 
-from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.constants import Fields, Values, Messages
 from app.api.dependencies.dao import ChatDAODep
@@ -118,9 +117,9 @@ async def delete_chat_with_id(
         ResponseMessageDTO: Message with count of deleted chats.
     """
     deleted_chats_count: int = await chat_dao.delete(
-        filter_by={Fields.ID: chat_id, BaseConstants.USER_ID: current_user.id}
+        filter_by={Fields.ID: chat_id, Fields.USER_ID: current_user.id}
     )
     message: dict[str, str] = {
-        BaseConstants.MESSAGE_FIELD: f"{deleted_chats_count} {Messages.CHATS_DELETED}"
+        Fields.MESSAGE: f"{deleted_chats_count} {Messages.CHATS_DELETED}"
     }
     return ResponseMessageDTO.model_validate(message)

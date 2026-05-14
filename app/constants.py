@@ -10,15 +10,6 @@ POSTGRESQL_ASYNCPG_LINK_BEGIN: str = "postgresql+asyncpg://"
 REDIS_LINK_BEGIN: str = "redis://:"
 
 
-class BaseConstants:
-    """Application-wide shared string constants."""
-
-    USER_DISABLED: str = "User is disabled"
-    MESSAGE_FIELD: str = "message"
-    USER_ID: str = "user_id"
-    ID: str = "id"
-
-
 class ConfigFieldNames:
     """Environment variable names used by settings validators."""
 

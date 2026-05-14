@@ -48,3 +48,5 @@ class Fields(StrEnum):
     REFRESH_TOKEN_TYPE = "typ"
     EMAIL = "email"
     MESSAGE = "message"
+    ID = "id"
+    USER_ID = "user_id"

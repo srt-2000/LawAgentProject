@@ -7,7 +7,6 @@ chat lifecycle: create new chat, load existing chat by ID for the current user.
 
 from fastapi import WebSocket
 
-from app.constants import BaseConstants
 from app.api.dependencies.dao import ChatDAODep
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDomain
@@ -72,7 +71,7 @@ class CurrentChatService(WSMessageService):
         """
         data_to_create_new_chat: dict[str, str | int] = {
             Fields.TITLE: f"{Messages.NEW_CHAT_OF} {self.user_id}",
-            BaseConstants.USER_ID: self.user_id,
+            Fields.USER_ID: self.user_id,
         }
         new_chat: Chat = await self.chat_dao.add(**data_to_create_new_chat)
 
@@ -95,8 +94,8 @@ class CurrentChatService(WSMessageService):
 
         chat: Chat = await self.chat_dao.get_one_chat(
             filter_by={
-                BaseConstants.ID: current_chat_id,
-                BaseConstants.USER_ID: self.user_id,
+                Fields.ID: current_chat_id,
+                Fields.USER_ID: self.user_id,
             }
         )
 

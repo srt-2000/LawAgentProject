@@ -13,6 +13,7 @@ KEY = "key"
 
 # VALUES
 KEY_VALUE: str = "KEY_VALUE"
+ID: str = "id"
 
 
 class Messages(StrEnum):

@@ -27,9 +27,11 @@ class Fields(StrEnum):
     OK = "ok"
     ACCESS_TOKEN = "access_token"
     CHAT_ID = "chat_id"
+    USER_ID = "user_id"
     ID = "id"
     REQUEST = "request"
     PROFILE = "profile"
+    MESSAGE = "message"
 
 
 class Values(StrEnum):
@@ -55,6 +57,7 @@ class Messages(StrEnum):
     USER_REGISTERED = "user registered successfully"
     USER_IS_EXIST = "User is already exist"
     USER_NOT_FOUND = "User not found"
+    USER_DISABLED = "User is disabled"
     USER_NOT_DISABLED = "User not disabled"
 
     # CHAT messages

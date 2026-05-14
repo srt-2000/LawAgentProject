@@ -14,9 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.engine import Result, CursorResult
 from sqlalchemy.orm.interfaces import ORMOption
 
-from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.dao.constants import ROWCOUNT, Messages
+from app.dao.constants import ROWCOUNT, ID, Messages
 from app.storage.database import BaseSQLModel
 
 T = TypeVar("T", bound=BaseSQLModel)
@@ -43,7 +42,7 @@ class BaseDAO(Generic[T]):
 
         Args:
             filter_by: Field names and values that identify the row.
-            options: Optional SQLAlchemy loader options (e.g. ``selectinload``).
+            options: Optional SQLAlchemy loader options (e.g. ``select in load``).
             order_by: Optional SQLAlchemy order-by expressions.
 
         Returns:
@@ -62,7 +61,7 @@ class BaseDAO(Generic[T]):
         if order_by:
             query = query.order_by(*order_by)
         else:
-            query = query.order_by(getattr(self.__class__.model, BaseConstants.ID))
+            query = query.order_by(getattr(self.__class__.model, ID))
 
         result: Result[tuple[BaseSQLModel]] = await self._async_session.execute(query)
         founded_object: BaseSQLModel | None = result.scalar_one_or_none()

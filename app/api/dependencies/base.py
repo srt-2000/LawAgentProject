@@ -7,9 +7,8 @@ Load the current active user from DB.
 import loguru
 from fastapi import HTTPException, status
 
-from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
-from app.api.constants import Messages
+from app.api.constants import Messages, Fields
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.schemas.services import ResponseAccessTokenPayloadDTO
@@ -42,7 +41,7 @@ async def get_current_active_user(
 
     try:
         user: User = await user_dao.get_one_user(
-            filter_by={BaseConstants.ID: int(user_id)}
+            filter_by={Fields.ID: int(user_id)}
         )
     except ObjectNotFoundException:
         loguru.logger.exception(Messages.USER_NOT_FOUND)
@@ -54,7 +53,7 @@ async def get_current_active_user(
     if not user.is_active:
         loguru.logger.exception(f"{user_id} {Messages.USER_IS_NOT_ACTIVE}")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=BaseConstants.USER_DISABLED
+            status_code=status.HTTP_403_FORBIDDEN, detail=Messages.USER_DISABLED
         )
 
     return ResponseUserDTO.model_validate(user)

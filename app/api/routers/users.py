@@ -13,7 +13,6 @@ from app.api.dependencies.tokens import (
     RefreshManagerDep,
     HttpRefreshTokenDep,
 )
-from app.constants import BaseConstants
 from app.dao.exceptions import ObjectNotFoundException
 from app.api.constants import Fields, Values, Messages, LAX, ROOT_PATH, REFRESH_PATH
 from app.api.dependencies.dao import UserDAODep
@@ -67,7 +66,7 @@ async def register_user(
         )
         await user_dao.add(**new_user_data_to_add)
         message: dict[str, str] = {
-            BaseConstants.MESSAGE_FIELD: f"{new_user_data.name} {Messages.USER_REGISTERED}"
+            Fields.MESSAGE: f"{new_user_data.name} {Messages.USER_REGISTERED}"
         }
     return ResponseMessageDTO.model_validate(message)
 
@@ -129,7 +128,7 @@ async def login_user(
     response_data = {
         Fields.OK: True,
         Fields.ACCESS_TOKEN: access_token,
-        BaseConstants.MESSAGE_FIELD: Messages.AUTH_SUCCESS,
+        Fields.MESSAGE: Messages.AUTH_SUCCESS,
     }
     return ResponseDataUserLoginDTO.model_validate(response_data)
 
@@ -158,7 +157,7 @@ async def logout_user(
         key=Values.USERS_REFRESH_TOKEN, path=REFRESH_PATH
     )
     message: dict[str, str] = {
-        BaseConstants.MESSAGE_FIELD: Messages.LOGOUT_MESSAGE
+        Fields.MESSAGE: Messages.LOGOUT_MESSAGE
     }
     return ResponseMessageDTO.model_validate(message)
 
@@ -209,7 +208,7 @@ async def refresh_access_token_session(
     response_data = {
         Fields.OK: True,
         Fields.ACCESS_TOKEN: new_access_token,
-        BaseConstants.MESSAGE_FIELD: Messages.ACCESS_TOKEN_REFRESHED,
+        Fields.MESSAGE: Messages.ACCESS_TOKEN_REFRESHED,
     }
     return ResponseDataUserRefreshDTO.model_validate(response_data)
 
@@ -304,6 +303,6 @@ async def disable_me(
         )
 
     message: dict[str, str] = {
-        BaseConstants.MESSAGE_FIELD: f"{disabled_user.name} {BaseConstants.USER_DISABLED}"
+        Fields.MESSAGE: f"{disabled_user.name} {Messages.USER_DISABLED}"
     }
     return ResponseMessageDTO.model_validate(message)
