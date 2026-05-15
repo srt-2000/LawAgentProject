@@ -14,12 +14,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.schemas.config import AuthConfigDataDomain
 from app.constants import (
-    ConfigFieldNames,
-    EnvErrorsFieldNames,
+    ConfigFields,
     ConfigMessages,
-    ConfigValues,
-    POSTGRESQL_ASYNCPG_LINK_BEGIN,
-    REDIS_LINK_BEGIN,
+    ConfigPaths, IGNORE, MIN_PORT_NUMBER, MAX_PORT_NUMBER, MIN_ROUNDS_NUMBER, MAX_ROUNDS_NUMBER, MAX_SECRET_KEY_LEN
 )
 
 
@@ -27,7 +24,7 @@ class BaseAppSettings(BaseSettings):
     """Base for all settings classes. Loads from .env and ignores extra keys."""
 
     model_config = SettingsConfigDict(
-        env_file=ConfigValues.ENV_FILE_NAME, extra=ConfigValues.IGNORE
+        env_file=ConfigPaths.ENV_FILE_NAME, extra=IGNORE
     )
 
 
@@ -40,7 +37,7 @@ class DatabaseSettings(BaseAppSettings):
     DB_USER: str
     DB_PASSWORD: str
 
-    @field_validator(ConfigFieldNames.DB_PORT)
+    @field_validator(ConfigFields.DB_PORT)
     @classmethod
     def validate_port(cls, port_number: int) -> int:
         """Validate database port is in valid range.
@@ -55,9 +52,9 @@ class DatabaseSettings(BaseAppSettings):
             ValueError: If port is not in valid range (1-65535).
         """
         if (
-            not ConfigValues.MIN_PORT_NUMBER
-            <= port_number
-            <= ConfigValues.MAX_PORT_NUMBER
+            not MIN_PORT_NUMBER
+                <= port_number
+                <= MAX_PORT_NUMBER
         ):
             raise ValueError(ConfigMessages.PORT_NUMBER_VALUE_ERROR)
         return port_number
@@ -70,7 +67,7 @@ class DatabaseSettings(BaseAppSettings):
             str: Async connection URL for SQLAlchemy (postgresql+asyncpg).
         """
         return (
-            f"{POSTGRESQL_ASYNCPG_LINK_BEGIN}"
+            f"{ConfigPaths.POSTGRESQL_ASYNCPG_LINK_BEGIN}"
             f"{self.DB_USER}:{self.DB_PASSWORD}@"
             f"{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
@@ -91,7 +88,7 @@ class RedisSettings(BaseAppSettings):
         Returns:
             str: Redis URL of the form "redis://:<password>@<host>:<port>/<db>".
         """
-        return f"{REDIS_LINK_BEGIN}{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return f"{ConfigPaths.REDIS_LINK_BEGIN}{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
 
 
 class AuthSettings(BaseAppSettings):
@@ -105,7 +102,7 @@ class AuthSettings(BaseAppSettings):
     REFRESH_TOKEN_EXP_TIME_HOURS: float
     ROUNDS: int
 
-    @field_validator(ConfigFieldNames.CRYPT_ROUNDS)
+    @field_validator(ConfigFields.CRYPT_ROUNDS)
     @classmethod
     def validate_rounds(cls, rounds_number: int) -> int:
         """Validate bcrypt rounds are in valid range.
@@ -120,15 +117,15 @@ class AuthSettings(BaseAppSettings):
             ValueError: If rounds are not in valid range (4-31).
         """
         if (
-            not ConfigValues.MIN_ROUNDS_NUMBER
-            <= rounds_number
-            <= ConfigValues.MAX_ROUNDS_NUMBER
+            not MIN_ROUNDS_NUMBER
+                <= rounds_number
+                <= MAX_ROUNDS_NUMBER
         ):
             raise ValueError(ConfigMessages.CRYPT_ROUNDS_VALUE_ERROR)
         return rounds_number
 
     @field_validator(
-        ConfigFieldNames.ACCESS_SECRET_KEY, ConfigFieldNames.REFRESH_SECRET_KEY
+        ConfigFields.ACCESS_SECRET_KEY, ConfigFields.REFRESH_SECRET_KEY
     )
     @classmethod
     def validate_secret_key(cls, secret_key: str) -> str:
@@ -143,7 +140,7 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If secret key is empty or too short (less than 32 characters).
         """
-        if not secret_key or len(secret_key) < ConfigValues.MAX_SECRET_KEY_LEN:
+        if not secret_key or len(secret_key) < MAX_SECRET_KEY_LEN:
             raise ValueError(ConfigMessages.SECRET_KEY_VALUE_ERROR)
         return secret_key
 
@@ -191,12 +188,12 @@ def get_settings() -> Settings:
             env_name: str
             env_msg: str
 
-            if env_error[EnvErrorsFieldNames.LOC]:
-                env_name = env_error[EnvErrorsFieldNames.LOC][0]
+            if env_error[ConfigFields.LOC]:
+                env_name = env_error[ConfigFields.LOC][0]
             else:
                 env_name = ConfigMessages.ENV_ERROR_UNKNOWN
 
-            env_msg = env_error[EnvErrorsFieldNames.ENV_ERROR_MESSAGE]
+            env_msg = env_error[ConfigFields.ENV_ERROR_MESSAGE]
             logger.error(f"{ConfigMessages.CONFIG_ERROR} '{env_name}': {env_msg}")
         raise
     else:
