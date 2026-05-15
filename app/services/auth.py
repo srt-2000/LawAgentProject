@@ -24,7 +24,6 @@ class PasswordService:
 
     _ENCODING: Final[str] = UTF_8
 
-    # It's a base sync methods to use in thread pool for async def
     @classmethod
     def get_password_hash(cls, password: str) -> str:
         """Hash a plain text password.
@@ -35,8 +34,8 @@ class PasswordService:
         Returns:
             str: Hashed password.
         """
-        salt = bcrypt.gensalt(rounds=settings.auth.ROUNDS)
-        hashed = bcrypt.hashpw(password.encode(cls._ENCODING), salt)
+        salt: bytes = bcrypt.gensalt(rounds=settings.auth.ROUNDS)
+        hashed: bytes = bcrypt.hashpw(password.encode(cls._ENCODING), salt)
         return hashed.decode(cls._ENCODING)
 
     @classmethod
@@ -54,7 +53,6 @@ class PasswordService:
             plain_password.encode(cls._ENCODING), hashed_password.encode(cls._ENCODING)
         )
 
-    # It's async methods to use sync with thread pool
     @classmethod
     async def get_async_password_hash(cls, password: str) -> str:
         """Hash a password off the event loop via a worker thread.

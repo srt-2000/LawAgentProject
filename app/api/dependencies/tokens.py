@@ -45,7 +45,7 @@ def get_token_service() -> TokenService:
 TokenServiceDep = Annotated[TokenService, Depends(get_token_service)]
 
 
-def get_refresh_token_manager(
+async def get_refresh_token_manager(
     service: TokenServiceDep, dao: RedisDAODep
 ) -> RefreshTokenSessionManager:
     """Create a refresh-token session manager for Redis-backed rotation.

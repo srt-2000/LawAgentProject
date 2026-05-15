@@ -6,7 +6,14 @@ from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Request
 from starlette.templating import Jinja2Templates
 
-from app.api.constants import Fields, Values, TEMPLATES_PATH, INDEX_HTML, LOGIN_HTML, PROFILE_HTML
+from app.api.constants import (
+    Fields,
+    Values,
+    TEMPLATES_PATH,
+    INDEX_HTML,
+    LOGIN_HTML,
+    PROFILE_HTML,
+)
 
 from app.api.dependencies.users import CurrentUserDep
 
@@ -15,7 +22,7 @@ router = APIRouter(tags=[Values.PAGES_TAG])
 
 
 @router.get("/", response_class=HTMLResponse)
-def main_page(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
+async def main_page(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
     """Render the main landing page for authenticated user.
 
     Args:
@@ -35,7 +42,7 @@ def main_page(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
 
 
 @router.get("/profile", response_class=HTMLResponse)
-def profile(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
+async def profile(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
     """Render the user profile page.
 
     Args:
@@ -55,7 +62,7 @@ def profile(request: Request, current_user: CurrentUserDep) -> HTMLResponse:
 
 
 @router.get("/login", response_class=HTMLResponse)
-def login(request: Request) -> HTMLResponse:
+async def login(request: Request) -> HTMLResponse:
     """Render the login/register page."""
     return templates.TemplateResponse(
         name=LOGIN_HTML, context={Fields.REQUEST: request}

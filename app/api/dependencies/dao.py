@@ -16,7 +16,7 @@ from app.dao.users import UserDAO
 from app.api.dependencies.session import SessionDep
 
 
-def get_user_dao(session: SessionDep) -> UserDAO:
+async def get_user_dao(session: SessionDep) -> UserDAO:
     """Create a UserDAO instance bound to the current request session.
 
     Args:
@@ -28,7 +28,7 @@ def get_user_dao(session: SessionDep) -> UserDAO:
     return UserDAO(session)
 
 
-def get_chat_dao(session: SessionDep) -> ChatDAO:
+async def get_chat_dao(session: SessionDep) -> ChatDAO:
     """Create a ChatDAO instance bound to the current request session.
 
     Args:
@@ -40,7 +40,7 @@ def get_chat_dao(session: SessionDep) -> ChatDAO:
     return ChatDAO(session)
 
 
-def get_message_dao(session: SessionDep) -> MessageDAO:
+async def get_message_dao(session: SessionDep) -> MessageDAO:
     """Create a MessageDAO instance bound to the current request session.
 
     Args:
@@ -52,7 +52,7 @@ def get_message_dao(session: SessionDep) -> MessageDAO:
     return MessageDAO(session)
 
 
-def get_redis_dao(redis_session: RedisDep) -> RedisDAO:
+async def get_redis_dao(redis_session: RedisDep) -> RedisDAO:
     """Create a RedisDAO instance bound to the current Redis connection.
 
     Args:
