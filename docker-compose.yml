@@ -3,12 +3,12 @@ services:
     image: postgres:17-alpine
     container_name: lap_db
     restart: always
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data_lap:/var/lib/postgresql/data
     env_file:
       - .env
+    ports:
+      - ${PORTS}
+    volumes:
+      - postgres_data_lap:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
@@ -18,28 +18,28 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.50"
-          memory: 512M
+          cpus: ${CPUS_LIMIT}
+          memory: ${MEMORY_LIMIT}
         reservations:
-          cpus: "0.25"
-          memory: 256M
+          cpus: ${CPUS_RESERVE}
+          memory: ${MEMORY_RESERVE}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+      interval: ${INTERVAL}
+      timeout: ${TIMEOUT}
+      retries: ${RETRIES}
+      start_period: ${START_PERIOD}
 
   redis:
     image: redis:8-alpine
     container_name: lap_redis
     restart: always
+    env_file:
+      - .env
     ports:
       - "6379:6379"
     volumes:
       - redis_data_lap:/var/lib/redis/data
-    env_file:
-      - .env
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
@@ -51,17 +51,17 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.50"
-          memory: 512M
+          cpus: ${REDIS_CPUS_LIMIT}
+          memory: ${REDIS_MEMORY_LIMIT}
         reservations:
-          cpus: "0.25"
-          memory: 256M
+          cpus: ${REDIS_CPUS_RESERVE}
+          memory: ${REDIS_MEMORY_RESERVE}
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
+      interval: ${REDIS_INTERVAL}
+      timeout: ${REDIS_TIMEOUT}
+      retries: ${REDIS_RETRIES}
+      start_period: ${REDIS_START_PERIOD}
 
 networks:
   dbnet:

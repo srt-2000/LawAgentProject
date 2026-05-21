@@ -33,7 +33,12 @@ from app.services.exceptions import TokenCheckFailed
 
 
 class TokenService:
-    """Create, decode, and extract JWT access and refresh tokens."""
+    """Encode, decode, and extract JWT access and refresh tokens.
+
+    Uses :class:`~app.schemas.config.AuthConfigDataDomain` for secrets, algorithm,
+    and lifetimes. Cookie helpers raise :class:`~app.services.exceptions.TokenCheckFailed`
+    when required tokens are missing.
+    """
 
     def __init__(self, auth_data: AuthConfigDataDomain) -> None:
         """Initialize the service with validated auth configuration.
@@ -53,7 +58,7 @@ class TokenService:
             str: Encoded JWT access token.
         """
         expire_time: datetime = datetime.now(timezone.utc) + timedelta(
-            minutes=self.auth_data.access_token_exp_time_minutes
+            seconds=self.auth_data.access_token_exp_time_sec
         )
         to_encode: dict[str, str | datetime] = {
             Fields.TOKEN_SUB: user_id,
@@ -73,11 +78,12 @@ class TokenService:
             user_id: Numeric user identifier encoded into the ``sub`` claim.
 
         Returns:
-            RedisRefreshTokenDTO: Serialized refresh token, JWT ID, and Redis TTL seconds.
+            RedisRefreshTokenDTO: Encoded refresh JWT, ``jti``, and Redis TTL in seconds
+                (aligned with refresh lifetime, not the JWT ``exp`` claim name on the DTO).
         """
         jti: str = secrets.token_urlsafe(self.auth_data.refresh_token_entropy)
         expire_time: datetime = datetime.now(timezone.utc) + timedelta(
-            hours=self.auth_data.refresh_token_exp_time_hours
+            seconds=self.auth_data.refresh_token_exp_time_sec
         )
 
         to_encode: dict[str, str | datetime | Literal["refresh"]] = {
@@ -120,7 +126,10 @@ class TokenService:
             valid_payload: ResponseAccessTokenPayloadDTO = (
                 ResponseAccessTokenPayloadDTO.model_validate(payload)
             )
-        except (DecodeError, ExpiredSignatureError, Exception):
+        except ExpiredSignatureError:
+            loguru.logger.warning(Messages.TOKEN_IS_EXPIRED)
+            raise TokenCheckFailed
+        except DecodeError:
             loguru.logger.warning(Messages.ACCESS_TOKEN_DECODE_ERROR)
             raise TokenCheckFailed
 
@@ -128,12 +137,6 @@ class TokenService:
 
         if expire is None:
             loguru.logger.warning(Messages.TOKEN_EXPIRATION_IS_NONE)
-            raise TokenCheckFailed
-
-        expire_time: datetime = datetime.fromtimestamp(expire, tz=timezone.utc)
-
-        if expire_time < datetime.now(timezone.utc):
-            loguru.logger.warning(Messages.TOKEN_IS_EXPIRED)
             raise TokenCheckFailed
 
         return valid_payload
@@ -161,7 +164,10 @@ class TokenService:
             valid_payload: ResponseRefreshTokenPayloadDTO = (
                 ResponseRefreshTokenPayloadDTO.model_validate(payload)
             )
-        except (DecodeError, ExpiredSignatureError, Exception):
+        except ExpiredSignatureError:
+            loguru.logger.warning(Messages.TOKEN_IS_EXPIRED)
+            raise TokenCheckFailed
+        except DecodeError:
             loguru.logger.warning(Messages.REFRESH_TOKEN_DECODE_ERROR)
             raise TokenCheckFailed
 
@@ -194,16 +200,16 @@ class TokenService:
 
     @staticmethod
     def get_access_token_from_websocket(storage: WebSocket) -> str:
-        """Extract access token from the WebSocket handshake cookies.
+        """Extract the access token from WebSocket handshake cookies.
 
         Args:
-            storage: WebSocket connection (cookies are taken from the handshake).
+            storage: Active WebSocket connection whose handshake carries cookies.
 
         Returns:
             str: JWT access token string.
 
         Raises:
-            TokenCheckFailed: If access token cookie is missing from the handshake.
+            TokenCheckFailed: If the access token cookie is missing from the handshake.
         """
         current_token: str | None = storage.cookies.get(USERS_ACCESS_TOKEN)
 
@@ -236,26 +242,26 @@ class TokenService:
 
 
 class RefreshTokenSessionManager:
-    """Coordinate refresh JWT issuance with Redis lookups keyed by JWT ID."""
+    """Issue refresh tokens in Redis and validate rotation via ``jti`` keys."""
 
     def __init__(self, service: TokenService, dao: RedisDAO) -> None:
-        """Capture collaborators required for refresh lifecycle management.
+        """Wire token encoding with Redis-backed refresh session state.
 
         Args:
-            service: Token encoder/decoder sharing auth configuration.
-            dao: Redis persistence used to map ``jti`` values to ``user_id`` strings.
+            service: Token encoder and decoder sharing auth configuration.
+            dao: Redis store mapping refresh ``jti`` keys to user identifier strings.
         """
         self.service = service
         self.dao = dao
 
     async def create_refresh_token(self, user_id: int) -> str:
-        """Persist refresh metadata and return the encoded JWT for clients.
+        """Persist refresh metadata in Redis and return the encoded JWT.
 
         Args:
-            user_id: Authenticated user owning the refresh session.
+            user_id: Authenticated user identifier owning the new refresh session.
 
         Returns:
-            str: Encoded refresh JWT stored alongside Redis metadata.
+            str: Encoded refresh JWT whose ``jti`` is stored in Redis with a TTL.
         """
         token_dto: RedisRefreshTokenDTO = self.service.create_refresh_token_dto(user_id)
 
@@ -268,16 +274,16 @@ class RefreshTokenSessionManager:
         return refresh_token
 
     async def revoke_refresh_token(self, refresh_token: str) -> str:
-        """Validate a refresh token, consume Redis state, and return the subject user id.
+        """Validate a refresh JWT, delete its Redis entry, and return the subject.
 
         Args:
-            refresh_token: Refresh JWT presented by the client.
+            refresh_token: Refresh JWT presented by the client (for example from a cookie).
 
         Returns:
-            str: Subject user identifier extracted after Redis verification.
+            str: ``sub`` claim value after the Redis ``jti`` entry matches and is removed.
 
         Raises:
-            TokenCheckFailed: If decoding fails, Redis data is missing, or subjects mismatch.
+            TokenCheckFailed: If decoding fails, Redis has no ``jti`` entry, or ``sub`` mismatches.
         """
         payload_dto: ResponseRefreshTokenPayloadDTO = self.service.decode_refresh_token(
             refresh_token

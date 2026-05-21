@@ -16,16 +16,20 @@ from app.schemas.config import AuthConfigDataDomain
 from app.constants import (
     ConfigFields,
     ConfigMessages,
-    ConfigPaths, IGNORE, MIN_PORT_NUMBER, MAX_PORT_NUMBER, MIN_ROUNDS_NUMBER, MAX_ROUNDS_NUMBER, MAX_SECRET_KEY_LEN
+    ConfigPaths,
+    IGNORE,
+    MIN_PORT_NUMBER,
+    MAX_PORT_NUMBER,
+    MIN_ROUNDS_NUMBER,
+    MAX_ROUNDS_NUMBER,
+    MAX_SECRET_KEY_LEN,
 )
 
 
 class BaseAppSettings(BaseSettings):
     """Base for all settings classes. Loads from .env and ignores extra keys."""
 
-    model_config = SettingsConfigDict(
-        env_file=ConfigPaths.ENV_FILE_NAME, extra=IGNORE
-    )
+    model_config = SettingsConfigDict(env_file=ConfigPaths.ENV_FILE_NAME, extra=IGNORE)
 
 
 class DatabaseSettings(BaseAppSettings):
@@ -51,20 +55,16 @@ class DatabaseSettings(BaseAppSettings):
         Raises:
             ValueError: If port is not in valid range (1-65535).
         """
-        if (
-            not MIN_PORT_NUMBER
-                <= port_number
-                <= MAX_PORT_NUMBER
-        ):
+        if not MIN_PORT_NUMBER <= port_number <= MAX_PORT_NUMBER:
             raise ValueError(ConfigMessages.PORT_NUMBER_VALUE_ERROR)
         return port_number
 
     @computed_field  # type: ignore[prop-decorator]
     def db_url(self) -> str:
-        """Build async PostgresSQL connection URL from environment settings.
+        """Build an async PostgreSQL connection URL from environment settings.
 
         Returns:
-            str: Async connection URL for SQLAlchemy (postgresql+asyncpg).
+            str: Async SQLAlchemy URL using the ``postgresql+asyncpg`` driver.
         """
         return (
             f"{ConfigPaths.POSTGRESQL_ASYNCPG_LINK_BEGIN}"
@@ -92,14 +92,18 @@ class RedisSettings(BaseAppSettings):
 
 
 class AuthSettings(BaseAppSettings):
-    """Authentication settings: JWT secret, algorithm, and bcrypt rounds."""
+    """Authentication settings loaded from the environment.
+
+    Covers JWT signing secrets, algorithm, access and refresh lifetimes in seconds,
+    refresh ``jti`` entropy, and bcrypt cost rounds.
+    """
 
     ACCESS_SECRET_KEY: str
     REFRESH_SECRET_KEY: str
     REFRESH_TOKEN_ENTROPY: int
     ALGORITHM: Literal["HS256", "HS384", "HS512"]
-    ACCESS_TOKEN_EXP_TIME_MINUTES: float
-    REFRESH_TOKEN_EXP_TIME_HOURS: float
+    ACCESS_TOKEN_EXP_TIME_SEC: int
+    REFRESH_TOKEN_EXP_TIME_SEC: int
     ROUNDS: int
 
     @field_validator(ConfigFields.CRYPT_ROUNDS)
@@ -116,17 +120,11 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If rounds are not in valid range (4-31).
         """
-        if (
-            not MIN_ROUNDS_NUMBER
-                <= rounds_number
-                <= MAX_ROUNDS_NUMBER
-        ):
+        if not MIN_ROUNDS_NUMBER <= rounds_number <= MAX_ROUNDS_NUMBER:
             raise ValueError(ConfigMessages.CRYPT_ROUNDS_VALUE_ERROR)
         return rounds_number
 
-    @field_validator(
-        ConfigFields.ACCESS_SECRET_KEY, ConfigFields.REFRESH_SECRET_KEY
-    )
+    @field_validator(ConfigFields.ACCESS_SECRET_KEY, ConfigFields.REFRESH_SECRET_KEY)
     @classmethod
     def validate_secret_key(cls, secret_key: str) -> str:
         """Validate secret key is not empty and has minimum length.
@@ -146,19 +144,19 @@ class AuthSettings(BaseAppSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     def auth_config(self) -> AuthConfigDataDomain:
-        """Build validated JWT configuration for token services.
+        """Map environment auth settings to the token service configuration DTO.
 
         Returns:
-            AuthConfigDataDomain: Access and refresh secrets, algorithm, entropy, and
-                token lifetimes derived from environment settings.
+            AuthConfigDataDomain: JWT secrets, algorithm, lifetimes, and refresh ``jti``
+                entropy. Bcrypt ``ROUNDS`` remain on this settings object only.
         """
         return AuthConfigDataDomain(
             access_secret_key=self.ACCESS_SECRET_KEY,
             refresh_secret_key=self.REFRESH_SECRET_KEY,
             refresh_token_entropy=self.REFRESH_TOKEN_ENTROPY,
             algorithm=self.ALGORITHM,
-            access_token_exp_time_minutes=self.ACCESS_TOKEN_EXP_TIME_MINUTES,
-            refresh_token_exp_time_hours=self.REFRESH_TOKEN_EXP_TIME_HOURS,
+            access_token_exp_time_sec=self.ACCESS_TOKEN_EXP_TIME_SEC,
+            refresh_token_exp_time_sec=self.REFRESH_TOKEN_EXP_TIME_SEC,
         )
 
 
