@@ -9,14 +9,14 @@ from typing import Final
 
 import anyio
 import bcrypt
-from fastapi import HTTPException, status
+from loguru import logger
 from pydantic import EmailStr
 from app.config import settings
-from app.dao.exceptions import ObjectNotFoundException
-from app.api.dependencies.dao import UserDAODep
+from app.dao.users import UserDAO
 from app.models.models import User
 from app.services.constants import Fields, UTF_8, Messages
 from app.schemas.users import AuthServiceUserDomain
+from app.services.exceptions import AuthenticationFailed
 
 
 class PasswordService:
@@ -94,7 +94,7 @@ class AuthService(PasswordService):
 
     @classmethod
     async def authenticate_user(
-        cls, email: EmailStr, password: str, user_dao: UserDAODep
+        cls, email: EmailStr, password: str, user_dao: UserDAO
     ) -> AuthServiceUserDomain:
         """Authenticate user by email and password.
 
@@ -107,28 +107,19 @@ class AuthService(PasswordService):
             AuthServiceUserDomain: Authenticated user projection without secrets.
 
         Raises:
-            HTTPException: If credentials are invalid or account is disabled.
+            AuthenticationFailed: If password is invalid or account is disabled.
+            ObjectNotFoundException: If no user exists for the given email (propagated from DAO).
         """
-        try:
-            user: User = await user_dao.get_one_user(filter_by={Fields.EMAIL: email})
-        except ObjectNotFoundException:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.USER_NOT_FOUND,
-            )
+        user: User = await user_dao.get_one_user(filter_by={Fields.EMAIL: email})
 
         if not await cls.get_async_verify_password(
             plain_password=password, hashed_password=str(user.password_hash)
         ):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.USER_NOT_FOUND,
-            )
+            logger.warning(Messages.PASSWORD_DOESNT_MATCH)
+            raise AuthenticationFailed
 
         if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.USER_DISABLED,
-            )
+            logger.warning(Messages.USER_DISABLED)
+            raise AuthenticationFailed
 
         return AuthServiceUserDomain.model_validate(user)

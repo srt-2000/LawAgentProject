@@ -21,6 +21,6 @@ class Messages(StrEnum):
 
     OBJECT_NOT_FOUND = "object not found"
     DATA_IS_NONE = "data is NONE"
-    UPDATE_FAILED = "update failed"
+    UPDATE_FAILED = "object update failed"
     SAVING_FAILED = "saving failed"
     GET_DEL_OPERATION_FAILED = "redis get/del operation failed"

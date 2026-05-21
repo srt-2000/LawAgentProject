@@ -21,6 +21,7 @@ class Messages(StrEnum):
     """Standard messages from services."""
 
     WS_ERROR_MESSAGE = "Websocket ERROR"
+    WS_DISCONNECTED = "Websocket disconnected"
     SEND_MESSAGE_ERROR = "Send message error"
     SAVE_MESSAGE_TO_DB_ERROR = "Save message to DB error"
     SERIALIZE_MESSAGE_ERROR = "Serialize message before sending error"
@@ -32,10 +33,15 @@ class Messages(StrEnum):
     INVALID_TOKEN_TYPE = "Invalid token type"
     USER_ID_DONT_MATCH = "User ID in refresh token and in the storage dont match"
     USER_DISABLED = "User disabled"
+    PASSWORD_DOESNT_MATCH = "Password doesn't match"
     NEW_CHAT_OF = "new chat of"
     USER_NOT_FOUND = "user not found"
+    ACCESS_TOKEN_DECODE_ERROR = "Access token decode error"
     TOKEN_NOT_VALID = "Token is not valid"
     TOKEN_IS_EXPIRED = "Token is expired"
+    TOKEN_EXPIRATION_IS_NONE = "Token expiration isn't none"
+    TOKEN_NOT_FOUND = "Token not found"
+    AUTH_DATA_NOT_CORRECT = "Auth data not correct"
 
 
 class Fields(StrEnum):

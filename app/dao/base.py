@@ -8,6 +8,7 @@ by the caller (for example FastAPI session dependencies).
 
 from typing import TypeVar, Generic, Type, ClassVar, cast, Sequence
 
+import loguru
 from loguru import logger
 from sqlalchemy import delete, select, Select, Delete, ColumnElement
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -67,6 +68,7 @@ class BaseDAO(Generic[T]):
         founded_object: BaseSQLModel | None = result.scalar_one_or_none()
 
         if founded_object is None:
+            loguru.logger.warning(Messages.OBJECT_NOT_FOUND)
             raise ObjectNotFoundException(self.__class__.model.__name__)
 
         return cast(T, founded_object)
@@ -109,7 +111,9 @@ class BaseDAO(Generic[T]):
         updated_object: T | None = result.scalar_one_or_none()
 
         if updated_object is None:
-            logger.error(f"{Messages.UPDATE_FAILED} {filter_by}")
+            logger.error(
+                f"{Messages.OBJECT_NOT_FOUND} - {Messages.UPDATE_FAILED} - {filter_by}"
+            )
             raise ObjectNotFoundException(self.__class__.model.__name__)
 
         for key, value in kwargs.items():

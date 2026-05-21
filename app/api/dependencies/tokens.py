@@ -8,11 +8,15 @@ plus small dependencies that extract access tokens from HTTP/WebSocket cookies.
 from functools import lru_cache
 from typing import Annotated, cast
 
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
+from loguru import logger
+from starlette import status
 
+from app.api.constants import Messages
 from app.api.dependencies.dao import RedisDAODep
 from app.config import settings
 from app.schemas.config import AuthConfigDataDomain
+from app.services.exceptions import TokenCheckFailed
 from app.services.tokens import TokenService, RefreshTokenSessionManager
 
 
@@ -77,8 +81,18 @@ def get_access_token_from_http(request: Request) -> str:
 
     Returns:
         str: Access token string.
+
+    Raises:
+        HTTPException: 401 with ``Messages.AUTH_DATA_NOT_CORRECT`` if the cookie is missing.
     """
-    http_access_token: str = TokenService.get_access_token_from_http(request)
+    try:
+        http_access_token: str = TokenService.get_access_token_from_http(request)
+    except TokenCheckFailed as error:
+        logger.warning(str(error))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=Messages.AUTH_DATA_NOT_CORRECT,
+        )
 
     return http_access_token
 
@@ -91,9 +105,18 @@ def get_refresh_token_from_http(request: Request) -> str:
 
     Returns:
         str: Refresh token string.
-    """
-    http_refresh_token: str = TokenService.get_refresh_token_from_http(request)
 
+    Raises:
+        HTTPException: 401 with ``Messages.AUTH_DATA_NOT_CORRECT`` if the cookie is missing.
+    """
+    try:
+        http_refresh_token: str = TokenService.get_refresh_token_from_http(request)
+    except TokenCheckFailed as error:
+        logger.warning(str(error))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=Messages.AUTH_DATA_NOT_CORRECT,
+        )
     return http_refresh_token
 
 

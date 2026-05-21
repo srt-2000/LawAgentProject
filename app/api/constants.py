@@ -11,7 +11,6 @@ from typing import Literal
 REASON_LEN_LIMIT: int = 123
 LAX: Literal["lax"] = "lax"
 ROOT_PATH: str = "/"
-REFRESH_PATH: str = "/user/refresh"
 TEMPLATES_PATH: str = "app/templates"
 INDEX_HTML: str = "index.html"
 PROFILE_HTML: str = "profile.html"
@@ -48,17 +47,18 @@ class Messages(StrEnum):
     """Standard user-facing text messages."""
 
     # AUTH messages
-    AUTH_DATA_NOT_CORRECT = "Login or Password is not right"
+    AUTH_DATA_NOT_CORRECT = "Auth data not correct"
     AUTH_SUCCESS = "Authorisation successful"
     LOGOUT_MESSAGE = "User is logout"
     ACCESS_TOKEN_REFRESHED = "Access token refreshed"
+    NOT_EXPECTED_AUTH_ERROR = "Not expected authenticate error"
 
     # USER messages
     USER_REGISTERED = "user registered successfully"
     USER_IS_EXIST = "User is already exist"
     USER_NOT_FOUND = "User not found"
     USER_DISABLED = "User is disabled"
-    USER_NOT_DISABLED = "User not disabled"
+    DISABLE_FAILED = "Disable failed"
 
     # CHAT messages
     WELCOME_MESSAGE = "Hello! How can I help you?"
@@ -66,8 +66,10 @@ class Messages(StrEnum):
     CHAT_NOT_FOUND = "Chat not found"
     STUB_MESSAGE = "STUB test message sent/receive"
     CHATS_DELETED = "chats deleted"
+    WS_ERROR_MESSAGE = "Websocket ERROR"
 
     # DEPENDENCIES messages
     NO_USER_ID_IN_TOKEN = "No user id found in token"
     USER_IS_NOT_ACTIVE = "User is not active"
     ERROR_GET_WS_ACTIVE_USER = "Error while getting active user from websocket"
+    SESSION_FAILED = "Session failed"

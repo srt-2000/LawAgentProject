@@ -11,10 +11,9 @@ from typing import Literal
 
 import jwt
 import loguru
-from fastapi import Request, HTTPException, status, WebSocket
+from fastapi import Request, WebSocket
 from jwt import DecodeError, ExpiredSignatureError
 
-from app.dao.exceptions import RedisKeyValueNotFoundException
 from app.dao.redis_storage import RedisDAO
 
 from app.schemas.config import AuthConfigDataDomain
@@ -30,6 +29,7 @@ from app.services.constants import (
     USERS_ACCESS_TOKEN,
     USERS_REFRESH_TOKEN,
 )
+from app.services.exceptions import TokenCheckFailed
 
 
 class TokenService:
@@ -109,7 +109,7 @@ class TokenService:
             ResponseAccessTokenPayloadDTO: Decoded and validated token payload.
 
         Raises:
-            HTTPException: If token is invalid or expired.
+            TokenCheckFailed: If token is invalid, expired, or missing expiration.
         """
         try:
             payload: ResponseAccessTokenPayloadDTO = jwt.decode(
@@ -121,26 +121,20 @@ class TokenService:
                 ResponseAccessTokenPayloadDTO.model_validate(payload)
             )
         except (DecodeError, ExpiredSignatureError, Exception):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.TOKEN_NOT_VALID,
-            )
+            loguru.logger.warning(Messages.ACCESS_TOKEN_DECODE_ERROR)
+            raise TokenCheckFailed
 
         expire: int | None = valid_payload.exp
 
         if expire is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.TOKEN_NOT_VALID,
-            )
+            loguru.logger.warning(Messages.TOKEN_EXPIRATION_IS_NONE)
+            raise TokenCheckFailed
 
         expire_time: datetime = datetime.fromtimestamp(expire, tz=timezone.utc)
 
         if expire_time < datetime.now(timezone.utc):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.TOKEN_IS_EXPIRED,
-            )
+            loguru.logger.warning(Messages.TOKEN_IS_EXPIRED)
+            raise TokenCheckFailed
 
         return valid_payload
 
@@ -156,7 +150,7 @@ class TokenService:
             ResponseRefreshTokenPayloadDTO: Normalized refresh payload including ``jti``.
 
         Raises:
-            HTTPException: If decoding fails or token type is not ``refresh``.
+            TokenCheckFailed: If decoding fails or token type is not ``refresh``.
         """
         try:
             payload: ResponseRefreshTokenPayloadDTO = jwt.decode(
@@ -168,18 +162,12 @@ class TokenService:
                 ResponseRefreshTokenPayloadDTO.model_validate(payload)
             )
         except (DecodeError, ExpiredSignatureError, Exception):
-            loguru.logger.exception(Messages.REFRESH_TOKEN_DECODE_ERROR)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.REFRESH_TOKEN_IS_NOT_VALID,
-            )
+            loguru.logger.warning(Messages.REFRESH_TOKEN_DECODE_ERROR)
+            raise TokenCheckFailed
 
         if valid_payload.typ != REFRESH:
-            loguru.logger.exception(Messages.INVALID_TOKEN_TYPE)
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.INVALID_TOKEN_TYPE,
-            )
+            loguru.logger.warning(Messages.INVALID_TOKEN_TYPE)
+            raise TokenCheckFailed
 
         return valid_payload
 
@@ -194,15 +182,14 @@ class TokenService:
             str: JWT access token.
 
         Raises:
-            HTTPException: If access token not found in cookies.
+            TokenCheckFailed: If access token cookie is missing.
         """
         current_token: str | None = request.cookies.get(USERS_ACCESS_TOKEN)
 
         if not current_token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.TOKEN_NOT_VALID,
-            )
+            loguru.logger.warning(Messages.TOKEN_NOT_FOUND)
+            raise TokenCheckFailed
+
         return current_token
 
     @staticmethod
@@ -216,15 +203,14 @@ class TokenService:
             str: JWT access token string.
 
         Raises:
-            HTTPException: 401 if cookie "users_access_token" is missing.
+            TokenCheckFailed: If access token cookie is missing from the handshake.
         """
         current_token: str | None = storage.cookies.get(USERS_ACCESS_TOKEN)
 
         if not current_token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.TOKEN_NOT_VALID,
-            )
+            loguru.logger.warning(Messages.TOKEN_NOT_FOUND)
+            raise TokenCheckFailed
+
         return current_token
 
     @staticmethod
@@ -238,15 +224,14 @@ class TokenService:
             str: JWT refresh token string.
 
         Raises:
-            HTTPException: If refresh token cookie is missing or empty.
+            TokenCheckFailed: If refresh token cookie is missing or empty.
         """
         current_token: str | None = request.cookies.get(USERS_REFRESH_TOKEN)
 
         if not current_token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.TOKEN_NOT_VALID,
-            )
+            loguru.logger.warning(Messages.TOKEN_NOT_FOUND)
+            raise TokenCheckFailed
+
         return current_token
 
 
@@ -292,27 +277,18 @@ class RefreshTokenSessionManager:
             str: Subject user identifier extracted after Redis verification.
 
         Raises:
-            HTTPException: If decoding fails, Redis data is missing, or subjects mismatch.
+            TokenCheckFailed: If decoding fails, Redis data is missing, or subjects mismatch.
         """
         payload_dto: ResponseRefreshTokenPayloadDTO = self.service.decode_refresh_token(
             refresh_token
         )
 
-        try:
-            deleted_user_id: str = await self.dao.get_del_data_by_key(payload_dto.jti)
-        except RedisKeyValueNotFoundException:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=Messages.REFRESH_TOKEN_REDIS_ERROR,
-            )
+        deleted_user_id: str = await self.dao.get_del_data_by_key(payload_dto.jti)
 
         if deleted_user_id != payload_dto.sub:
-            loguru.logger.exception(
+            loguru.logger.warning(
                 f"{Messages.REFRESH_TOKEN_REDIS_ERROR} {Messages.USER_ID_DONT_MATCH}"
             )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=Messages.REVOKE_REFRESH_TOKEN_ERROR,
-            )
+            raise TokenCheckFailed
 
         return deleted_user_id

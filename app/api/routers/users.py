@@ -6,6 +6,7 @@ profile read/update, and account disable.
 """
 
 from fastapi import APIRouter, HTTPException, status, Response
+from loguru import logger
 from pydantic import EmailStr
 
 from app.api.dependencies.tokens import (
@@ -14,7 +15,7 @@ from app.api.dependencies.tokens import (
     HttpRefreshTokenDep,
 )
 from app.dao.exceptions import ObjectNotFoundException
-from app.api.constants import Fields, Values, Messages, LAX, ROOT_PATH, REFRESH_PATH
+from app.api.constants import Fields, Values, Messages, LAX, ROOT_PATH
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
 from app.schemas.users import (
@@ -29,6 +30,7 @@ from app.schemas.users import (
 )
 from app.services.auth import AuthService
 from app.api.dependencies.users import CurrentUserDep
+from app.services.exceptions import AuthenticationFailed, TokenCheckFailed
 
 router = APIRouter(prefix="/user", tags=[Values.USER_TAG])
 
@@ -51,13 +53,14 @@ async def register_user(
     """
     try:
         await user_dao.get_one_user(filter_by={"email": new_user_data.email})
+        logger.info(Messages.USER_IS_EXIST)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=Messages.USER_IS_EXIST,
         )
     except ObjectNotFoundException:
         new_user_data_to_add: dict[str, str] = new_user_data.model_dump(
-            exclude={Fields.PASSWORD_CONFIRM}
+            exclude={Fields.PASSWORD_CONFIRM.value}
         )
         new_user_data_to_add[
             Fields.PASSWORD_HASH
@@ -100,12 +103,16 @@ async def login_user(
             password=login_user_data.password,
             user_dao=user_dao,
         )
-    except HTTPException:
+    except ObjectNotFoundException:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=Messages.AUTH_DATA_NOT_CORRECT,
         )
-
+    except AuthenticationFailed:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=Messages.AUTH_DATA_NOT_CORRECT,
+        )
     access_token: str = token_service.create_access_token(str(check_user.id))
     refresh_token: str = await refresh_token_manager.create_refresh_token(check_user.id)
 
@@ -123,7 +130,7 @@ async def login_user(
         httponly=True,
         samesite=LAX,
         secure=True,
-        path=REFRESH_PATH,
+        path=ROOT_PATH,
     )
     response_data = {
         Fields.OK: True,
@@ -150,15 +157,10 @@ async def logout_user(
         ResponseMessageDTO: Logout confirmation message.
     """
     await refresh_token_manager.revoke_refresh_token(refresh_token)
-    response.delete_cookie(
-        key=Values.USERS_ACCESS_TOKEN, path=ROOT_PATH
-    )
-    response.delete_cookie(
-        key=Values.USERS_REFRESH_TOKEN, path=REFRESH_PATH
-    )
-    message: dict[str, str] = {
-        Fields.MESSAGE: Messages.LOGOUT_MESSAGE
-    }
+
+    response.delete_cookie(key=Values.USERS_ACCESS_TOKEN, path=ROOT_PATH)
+    response.delete_cookie(key=Values.USERS_REFRESH_TOKEN, path=ROOT_PATH)
+    message: dict[str, str] = {Fields.MESSAGE: Messages.LOGOUT_MESSAGE}
     return ResponseMessageDTO.model_validate(message)
 
 
@@ -183,11 +185,18 @@ async def refresh_access_token_session(
     Raises:
         HTTPException: If refresh token is invalid, expired, or storage mismatches.
     """
-    user_id: str = await refresh_token_manager.revoke_refresh_token(refresh_token)
-    new_access_token: str = token_service.create_access_token(user_id)
-    new_refresh_token: str = await refresh_token_manager.create_refresh_token(
-        int(user_id)
-    )
+    try:
+        user_id: str = await refresh_token_manager.revoke_refresh_token(refresh_token)
+        new_access_token: str = token_service.create_access_token(user_id)
+        new_refresh_token: str = await refresh_token_manager.create_refresh_token(
+            int(user_id)
+        )
+    except TokenCheckFailed as error:
+        logger.warning(str(error))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=Messages.AUTH_DATA_NOT_CORRECT,
+        )
 
     response.set_cookie(
         key=Values.USERS_ACCESS_TOKEN,
@@ -203,7 +212,7 @@ async def refresh_access_token_session(
         httponly=True,
         samesite=LAX,
         secure=True,
-        path=REFRESH_PATH,
+        path=ROOT_PATH,
     )
     response_data = {
         Fields.OK: True,
@@ -246,13 +255,11 @@ async def update_me(
         HTTPException: If user not found after update.
     """
     update_data: dict[str, str | EmailStr] = update_user.model_dump(
-        exclude_none=True, exclude={Fields.PASSWORD_CONFIRM}
+        exclude_none=True, exclude={Fields.PASSWORD_CONFIRM.value}
     )
 
     if Fields.PASSWORD in update_data:
-        update_data[
-            Fields.PASSWORD_HASH
-        ] = await AuthService.get_async_password_hash(
+        update_data[Fields.PASSWORD_HASH] = await AuthService.get_async_password_hash(
             update_data.pop(Fields.PASSWORD)
         )
 
@@ -291,9 +298,10 @@ async def disable_me(
         )
 
         if disabled_user.is_active:
+            logger.warning(Messages.DISABLE_FAILED)
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=Messages.USER_NOT_DISABLED,
+                detail=Messages.DISABLE_FAILED,
             )
 
     except ObjectNotFoundException:

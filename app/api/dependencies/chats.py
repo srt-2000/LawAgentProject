@@ -11,9 +11,11 @@ from starlette.status import WS_1008_POLICY_VIOLATION
 from app.api.dependencies.base import get_current_active_user
 from app.api.constants import Messages, REASON_LEN_LIMIT
 from app.api.dependencies.dao import UserDAODep
+from app.api.dependencies.exceptions import CurrentUserNotActiveException
 from app.api.dependencies.tokens import TokenServiceDep
 from app.schemas.services import ResponseAccessTokenPayloadDTO
 from app.schemas.users import ResponseUserDTO
+from app.services.exceptions import TokenCheckFailed
 
 
 async def get_websocket_current_active_user(
@@ -30,6 +32,11 @@ async def get_websocket_current_active_user(
 
     Returns:
         ResponseUserDTO: Authenticated user data.
+
+    Raises:
+        WebSocketException: Policy violation (1008) if the token is invalid, the user is
+            inactive, or user resolution fails; close reason is truncated to
+            ``REASON_LEN_LIMIT``.
     """
 
     try:
@@ -40,9 +47,23 @@ async def get_websocket_current_active_user(
         current_active_user: ResponseUserDTO = await get_current_active_user(
             payload, user_dao
         )
+    except CurrentUserNotActiveException as exception:
+        reason: str = Messages.AUTH_DATA_NOT_CORRECT[:REASON_LEN_LIMIT]
+        logger.warning(str(exception))
+        raise WebSocketException(
+            code=WS_1008_POLICY_VIOLATION,
+            reason=reason,
+        ) from exception
+    except TokenCheckFailed as exception:
+        reason = Messages.AUTH_DATA_NOT_CORRECT[:REASON_LEN_LIMIT]
+        logger.warning(str(exception))
+        raise WebSocketException(
+            code=WS_1008_POLICY_VIOLATION,
+            reason=reason,
+        ) from exception
     except HTTPException as exception:
-        reason: str = str(exception.detail)[: REASON_LEN_LIMIT]
-        logger.warning(Messages.ERROR_GET_WS_ACTIVE_USER)
+        reason = Messages.AUTH_DATA_NOT_CORRECT[:REASON_LEN_LIMIT]
+        logger.warning(f"{Messages.ERROR_GET_WS_ACTIVE_USER} - {str(exception)}")
         raise WebSocketException(
             code=WS_1008_POLICY_VIOLATION,
             reason=reason,
