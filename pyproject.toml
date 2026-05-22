@@ -19,6 +19,7 @@ dependencies = [
     "pytest>=9.0.2",
     "httpx>=0.28.1",
     "loguru>=0.7.3",
+    "redis[hiredis]>=7.4.0",
 ]
 
 [tool.mypy]

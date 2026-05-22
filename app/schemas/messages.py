@@ -4,6 +4,7 @@ Message-related request/response schemas.
 Defines DTOs for WebSocket chat: payload sent to and from the client
 (message text, chat_id, and whether the sender is the bot).
 """
+
 from pydantic import BaseModel
 
 

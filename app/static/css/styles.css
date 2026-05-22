@@ -46,6 +46,11 @@ body {
     color: #721c24;
 }
 
+.reconnecting {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
 .profile-link {
     color: #ffffff;
     text-decoration: none;

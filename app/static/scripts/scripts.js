@@ -1,3 +1,74 @@
+/** WebSocket close code: policy violation (auth), matches backend WebSocketException. */
+const WS_CLOSE_POLICY_VIOLATION = 1008;
+
+/** Serialized refresh to avoid rotating refresh twice (backend revokes old refresh). */
+let refreshInFlight = null;
+
+/** Skip reactive reconnect when closing the socket on purpose (switch chat / unload). */
+let intentionalWsClose = false;
+
+/**
+ * Rotate access/refresh cookies via POST /user/refresh.
+ *
+ * @returns {Promise<void>}
+ */
+async function refreshSession() {
+    if (refreshInFlight) {
+        await refreshInFlight;
+        return;
+    }
+    refreshInFlight = (async () => {
+        const res = await fetch("/user/refresh", {
+            method: "POST",
+            credentials: "include",
+        });
+        if (!res.ok) {
+            window.location.href = "/login";
+            throw new Error("Session expired. Redirecting to login.");
+        }
+        await res.json().catch(() => null);
+    })();
+    try {
+        await refreshInFlight;
+    } finally {
+        refreshInFlight = null;
+    }
+}
+
+/**
+ * JSON fetch with credentials; on 401, refresh once and retry the same request.
+ *
+ * @param {string} path
+ * @param {RequestInit} [init]
+ * @param {boolean} [afterRefresh]
+ * @returns {Promise<any>}
+ */
+async function apiJson(path, init = {}, afterRefresh = false) {
+    const res = await fetch(path, {
+        credentials: "include",
+        ...init,
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (res.status === 401 && path !== "/user/refresh" && !afterRefresh) {
+        await refreshSession();
+        return apiJson(path, init, true);
+    }
+
+    if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        if (data && data.detail !== undefined) {
+            msg =
+                typeof data.detail === "string"
+                    ? data.detail
+                    : JSON.stringify(data.detail);
+        }
+        throw new Error(msg);
+    }
+    return data;
+}
+
 function qsGet(name) {
     return new URLSearchParams(window.location.search).get(name);
 }
@@ -13,7 +84,6 @@ function setChatIdInUrl(chatId) {
 }
 
 function wsUrlForChat(chatId) {
-    // Important: cookies/origin are the same, so WS uses the same host.
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
     const base = `${protocol}//${host}/ws/chat/`;
@@ -21,23 +91,9 @@ function wsUrlForChat(chatId) {
     return `${base}?chat_id=${encodeURIComponent(chatId)}`;
 }
 
-async function apiJson(path, init) {
-    const res = await fetch(path, {
-        credentials: "include",
-        ...init,
-    });
-
-    const data = await res.json().catch(() => null);
-    if (!res.ok) {
-        const msg = data && data.detail ? data.detail : `HTTP ${res.status}`;
-        throw new Error(msg);
-    }
-    return data;
-}
-
 function liCreateMessage(kind, text) {
     const li = document.createElement("li");
-    li.className = kind; // sent | received
+    li.className = kind;
     li.appendChild(document.createTextNode(text ?? ""));
     return li;
 }
@@ -62,15 +118,31 @@ function setConnectedUi(connected) {
     sendButton.disabled = !connected;
 }
 
-function closeWsIfAny() {
-    if (ws) {
-        try {
-            ws.close();
-        } catch (_) {
-            // ignore
-        }
-        ws = null;
+/**
+ * Show reconnecting state while refreshing session before WS retry.
+ *
+ * @param {boolean} active
+ */
+function setReconnectingUi(active) {
+    if (active) {
+        statusDiv.textContent = "REFRESHING SESSION…";
+        statusDiv.className = "reconnecting";
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+    } else {
+        setConnectedUi(false);
     }
+}
+
+function closeWsIfAny() {
+    if (!ws) return;
+    intentionalWsClose = true;
+    try {
+        ws.close();
+    } catch (_) {
+        // ignore
+    }
+    ws = null;
 }
 
 function clearMessages() {
@@ -81,7 +153,6 @@ function renderHistory(messages) {
     clearMessages();
     const list = Array.isArray(messages) ? messages.slice() : [];
 
-    // Older -> newer
     list.sort((a, b) => (a.id ?? 0) - (b.id ?? 0));
 
     for (const m of list) {
@@ -93,11 +164,117 @@ function renderHistory(messages) {
     messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function attachWsMessageHandler(socket) {
+    socket.onmessage = (event) => {
+        let data = null;
+        try {
+            data = JSON.parse(event.data);
+        } catch (_) {
+            data = null;
+        }
+
+        if (!data || !data.message_type) {
+            messagesEl.appendChild(liCreateMessage("received", event.data));
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+            return;
+        }
+
+        const mt = data.message_type;
+        const text = data.message ?? "";
+
+        if (mt === "assistant" || mt === "welcome") {
+            messagesEl.appendChild(liCreateMessage("received", text));
+        } else if (mt === "user") {
+            messagesEl.appendChild(liCreateMessage("sent", text));
+        } else {
+            messagesEl.appendChild(liCreateMessage("received", text));
+        }
+
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    };
+}
+
+/**
+ * Wait for WebSocket open or fail; used for reactive auth refresh on 1008.
+ *
+ * @param {string | number} chatId
+ * @returns {Promise<void>}
+ */
+function waitForWebSocketOpened(chatId) {
+    const url = wsUrlForChat(chatId);
+    const socket = new WebSocket(url);
+    ws = socket;
+
+    return new Promise((resolve, reject) => {
+        let opened = false;
+
+        socket.onopen = () => {
+            opened = true;
+            setConnectedUi(true);
+            resolve(undefined);
+        };
+
+        attachWsMessageHandler(socket);
+
+        socket.onerror = () => {
+            console.error("WebSocket error");
+            if (!opened) {
+                setConnectedUi(false);
+            }
+        };
+
+        socket.onclose = (event) => {
+            setConnectedUi(false);
+            if (intentionalWsClose) {
+                intentionalWsClose = false;
+                return;
+            }
+            if (!opened) {
+                const err = new Error(event.reason || `WebSocket closed (${event.code})`);
+                err.wsCloseCode = event.code;
+                reject(err);
+            }
+        };
+    });
+}
+
+/**
+ * Open WebSocket for chat. On 1008 (auth), refresh session once and retry (reactive path).
+ *
+ * @param {string | number} chatId
+ * @param {boolean} [allowAuthRefreshRetry]
+ * @returns {Promise<void>}
+ */
+async function connectWs(chatId, allowAuthRefreshRetry = true) {
+    intentionalWsClose = false;
+    setConnectedUi(false);
+
+    try {
+        await waitForWebSocketOpened(chatId);
+    } catch (err) {
+        if (
+            allowAuthRefreshRetry &&
+            err &&
+            typeof err.wsCloseCode === "number" &&
+            err.wsCloseCode === WS_CLOSE_POLICY_VIOLATION
+        ) {
+            setReconnectingUi(true);
+            try {
+                await refreshSession();
+            } finally {
+                setReconnectingUi(false);
+            }
+            await connectWs(chatId, false);
+            return;
+        }
+        throw err;
+    }
+}
+
 async function loadChatsList() {
     const payload = await apiJson("/chats/", { method: "GET" });
     const chats = payload.chat_list || [];
 
-    // Sort top-to-bottom: newer `created_at` to older
     chats.sort((a, b) => {
         const aTime = a.created_at ? new Date(a.created_at).getTime() : 0;
         const bTime = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -151,7 +328,7 @@ async function loadChatsList() {
                 closeWsIfAny();
                 setConnectedUi(false);
                 clearMessages();
-                sidebarHintEl.textContent = "У вас больше нет чатов.";
+                sidebarHintEl.textContent = "You don't have any chats.";
                 selectedChatId = null;
                 return;
             }
@@ -186,59 +363,6 @@ async function loadChatHistory(chatId) {
     renderHistory(chat.messages || []);
 }
 
-function connectWs(chatId) {
-    return new Promise((resolve) => {
-        const url = wsUrlForChat(chatId);
-        ws = new WebSocket(url);
-
-        ws.onopen = () => {
-            setConnectedUi(true);
-            resolve(true);
-        };
-
-        ws.onclose = (event) => {
-            setConnectedUi(false);
-            if (event && event.code === 1008) {
-                alert(event.reason || "Authentication failed. Please login again.");
-            }
-        };
-
-        ws.onerror = (err) => {
-            console.error("ws error:", err);
-            setConnectedUi(false);
-        };
-
-        ws.onmessage = (event) => {
-            let data = null;
-            try {
-                data = JSON.parse(event.data);
-            } catch (_) {
-                data = null;
-            }
-
-            if (!data || !data.message_type) {
-                // fallback
-                messagesEl.appendChild(liCreateMessage("received", event.data));
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-                return;
-            }
-
-            const mt = data.message_type;
-            const text = data.message ?? "";
-
-            if (mt === "assistant" || mt === "welcome") {
-                messagesEl.appendChild(liCreateMessage("received", text));
-            } else if (mt === "user") {
-                messagesEl.appendChild(liCreateMessage("sent", text));
-            } else {
-                messagesEl.appendChild(liCreateMessage("received", text));
-            }
-
-            messagesEl.scrollTop = messagesEl.scrollHeight;
-        };
-    });
-}
-
 async function openChatById(chatId, updateUrl) {
     selectedChatId = String(chatId);
     markActiveChat(selectedChatId);
@@ -261,7 +385,6 @@ newChatButton.addEventListener("click", async () => {
         const created = await apiJson("/chats/", { method: "POST" });
         const newId = created.id;
 
-        // Re-render the list so the new chat appears.
         await loadChatsList();
 
         await openChatById(newId, true);
@@ -278,7 +401,6 @@ chatForm.addEventListener("submit", async (event) => {
     const text = (messageInput.value || "").trim();
     if (!text) return;
 
-    // Optimistically add the user message (the server doesn't echo it back as `user`).
     messagesEl.appendChild(liCreateMessage("sent", text));
     messagesEl.scrollTop = messagesEl.scrollHeight;
 
@@ -293,14 +415,13 @@ async function init() {
 
     const chats = await loadChatsList();
     if (!chats.length) {
-        sidebarHintEl.textContent = "У вас пока нет чатов. Нажмите New chat.";
+        sidebarHintEl.textContent = "You have no chats yet. Click New chat.";
         return;
     }
 
     const chatIdFromUrl = qsGet("chat_id");
     const initialChatId = chatIdFromUrl ? chatIdFromUrl : chats[0].id;
 
-    // If `chatId` from the URL doesn't match existing chats, fall back to the first one.
     const exists = chats.some((c) => String(c.id) === String(initialChatId));
     const safeChatId = exists ? initialChatId : chats[0].id;
 
@@ -311,3 +432,17 @@ init().catch((e) => {
     console.error("init error:", e);
     sidebarHintEl.textContent = String(e.message || e);
 });
+
+const logoutTopBtn = document.getElementById("logoutTopBtn");
+if (logoutTopBtn) {
+    logoutTopBtn.addEventListener("click", async () => {
+        try {
+            await fetch("/user/logout", {
+                method: "POST",
+                credentials: "include",
+            });
+        } finally {
+            window.location.href = "/login";
+        }
+    });
+}

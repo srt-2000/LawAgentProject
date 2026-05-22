@@ -1,55 +1,65 @@
 """
 WebSocket message send/receive and persistence.
 
-Sends and receives JSON messages over WebSocket and persists them to the message table.
-Incoming messages are treated as user messages (is_bot=False); outgoing are set by caller.
+Provides JSON send/receive helpers and a repository helper that persists messages.
+Incoming messages are treated as user messages (is_bot=False); outgoing ``is_bot`` is set by caller.
 """
 
 from fastapi import WebSocket
 from fastapi.websockets import WebSocketDisconnect
 from loguru import logger
 
-from app.constants import BaseConstants
 from app.api.dependencies.dao import MessageDAODep
 from app.schemas.messages import WebSocketMessageDomain, WebSocketMessageDTO
-from app.services.constants import StandardMessages
+from app.services.constants import Messages, Fields
 
 
 class WSMessageRepositoryService:
+    """Persist WebSocket messages to the database."""
 
     @staticmethod
     async def save_message(
-            message: WebSocketMessageDomain,
-            message_dao: MessageDAODep
+        message: WebSocketMessageDomain, message_dao: MessageDAODep
     ) -> None:
+        """Save a message to the database.
+
+        Args:
+            message: Domain message with text, chat_id, and is_bot flag.
+            message_dao: Message DAO bound to the current request session.
+
+        Logs errors and returns without raising if persistence fails.
+        """
         try:
             await message_dao.add(
-                context=message.message,
-                chat_id=message.chat_id,
-                is_bot=message.is_bot
+                context=message.message, chat_id=message.chat_id, is_bot=message.is_bot
             )
         except Exception as error:
-            logger.error(f"{StandardMessages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
+            logger.error(f"{Messages.SAVE_MESSAGE_TO_DB_ERROR} {error}")
             return
 
 
 class WSMessageService(WSMessageRepositoryService):
-    """Mixin for sending/receiving WebSocket messages and saving them to the database."""
+    """Send and receive JSON WebSocket messages (persistence via ``save_message``)."""
 
     @staticmethod
-    async def send_json(
-            socket: WebSocket,
-            message: WebSocketMessageDTO
-    ) -> None:
-        """Send a message to the client as JSON and persist it in the database."""
+    async def send_json(socket: WebSocket, message: WebSocketMessageDTO) -> None:
+        """Send a message to the client as JSON.
 
+        Args:
+            socket: WebSocket connection to send on.
+            message: DTO serialized with ``model_dump`` before ``send_json``.
+
+        Raises:
+            WebSocketDisconnect: Re-raised when the client disconnects during send.
+        """
         try:
             serialized_message = message.model_dump()
             await socket.send_json(serialized_message)
         except WebSocketDisconnect:
+            logger.warning(Messages.WS_DISCONNECTED)
             raise
         except Exception as error:
-            logger.error(f"{StandardMessages.SEND_MESSAGE_ERROR} {error}")
+            logger.error(f"{Messages.SEND_MESSAGE_ERROR} {error}")
             return
 
     @staticmethod
@@ -67,7 +77,7 @@ class WSMessageService(WSMessageRepositoryService):
             WebSocketMessageDomain: Parsed message with chat_id and is_bot=False, or error DTO on failure.
         """
         error_message_domain: WebSocketMessageDomain = WebSocketMessageDomain(
-            message=StandardMessages.WS_ERROR_MESSAGE,
+            message=Messages.WS_ERROR_MESSAGE,
             chat_id=chat_id,
             is_bot=False,
         )
@@ -75,20 +85,21 @@ class WSMessageService(WSMessageRepositoryService):
         try:
             message: dict[str, str] = await socket.receive_json()
         except WebSocketDisconnect:
+            logger.warning(Messages.WS_DISCONNECTED)
             raise
         except Exception as error:
-            logger.error(f"{StandardMessages.RECEIVE_MESSAGE_ERROR} {error}")
+            logger.error(f"{Messages.RECEIVE_MESSAGE_ERROR} {error}")
             return error_message_domain
 
         try:
-            received_text: str | None = message.get(BaseConstants.MESSAGE_FIELD)
+            received_text: str | None = message.get(Fields.MESSAGE)
             received_message: WebSocketMessageDomain = WebSocketMessageDomain(
                 message=received_text,
                 chat_id=chat_id,
                 is_bot=False,
             )
         except Exception as error:
-            logger.error(f"{StandardMessages.SERIALIZE_MESSAGE_ERROR} {error}")
+            logger.error(f"{Messages.SERIALIZE_MESSAGE_ERROR} {error}")
             return error_message_domain
 
         return received_message

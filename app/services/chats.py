@@ -7,12 +7,11 @@ chat lifecycle: create new chat, load existing chat by ID for the current user.
 
 from fastapi import WebSocket
 
-from app.constants import BaseConstants
-from app.api.dependencies.dao import ChatDAODep
+from app.dao.chats import ChatDAO
 from app.models.models import Chat
 from app.schemas.chats import ChatWithMessagesDomain
-from app.services.message import WSMessageService
-from app.services.constants import FieldNames, StandardMessages
+from app.services.messages import WSMessageService
+from app.services.constants import Fields, Messages
 
 
 class WSConnectionManager:
@@ -54,7 +53,7 @@ class WSConnectionManager:
 class CurrentChatService(WSMessageService):
     """Creates and loads chats for the current user (used by WebSocket and HTTP)."""
 
-    def __init__(self, current_user_id: int, chat_dao: ChatDAODep) -> None:
+    def __init__(self, current_user_id: int, chat_dao: ChatDAO) -> None:
         """Store the user ID for all operations.
 
         Args:
@@ -65,14 +64,14 @@ class CurrentChatService(WSMessageService):
         self.chat_dao = chat_dao
 
     async def create_new_chat(self) -> ChatWithMessagesDomain:
-        """Create a new chat for the current user. Returns DTO with empty messages.
+        """Create a new chat for the current user.
 
         Returns:
-            ChatWithMessagesDTO: New chat with id, title, user_id, created_at, messages=[].
+            ChatWithMessagesDomain: New chat with id, title, user_id, created_at, and empty messages.
         """
         data_to_create_new_chat: dict[str, str | int] = {
-            FieldNames.TITLE: f"{StandardMessages.NEW_CHAT_OF} {self.user_id}",
-            BaseConstants.USER_ID: self.user_id,
+            Fields.TITLE: f"{Messages.NEW_CHAT_OF} {self.user_id}",
+            Fields.USER_ID: self.user_id,
         }
         new_chat: Chat = await self.chat_dao.add(**data_to_create_new_chat)
 
@@ -89,14 +88,18 @@ class CurrentChatService(WSMessageService):
 
         Args:
             current_chat_id: Chat ID to load.
+
         Returns:
-            ChatWithMessagesDTO if found and owned by user, None otherwise.
+            ChatWithMessagesDomain: Chat owned by the current user.
+
+        Raises:
+            ObjectNotFoundException: If the chat does not exist or is not owned by the user.
         """
 
         chat: Chat = await self.chat_dao.get_one_chat(
             filter_by={
-                BaseConstants.ID: current_chat_id,
-                BaseConstants.USER_ID: self.user_id,
+                Fields.ID: current_chat_id,
+                Fields.USER_ID: self.user_id,
             }
         )
 

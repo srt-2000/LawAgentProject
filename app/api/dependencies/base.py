@@ -1,106 +1,48 @@
 """
 Shared auth logic for HTTP and WebSocket.
 
-Decode JWT from cookie, validate expiry, and load the current active user from DB.
+Load the current active user from the database. Inactive accounts raise a domain
+exception mapped to HTTP or WebSocket errors in route dependencies.
 """
 
-from datetime import datetime, timezone
-from typing import cast
-
-import jwt
+from loguru import logger
 from fastapi import HTTPException, status
-from jwt import DecodeError, ExpiredSignatureError
 
-from app.config import settings
-from app.constants import BaseConstants
+from app.api.dependencies.exceptions import CurrentUserNotActiveException
 from app.dao.exceptions import ObjectNotFoundException
-from app.api.dependencies.constants import DependencyMessages
+from app.api.constants import Messages, Fields
 from app.api.dependencies.dao import UserDAODep
 from app.models.models import User
-from app.schemas.config import AuthConfigData
-from app.schemas.dependencies import ResponsePayloadDTO
 from app.schemas.users import ResponseUserDTO
 
 
-async def decode_token(token: str) -> ResponsePayloadDTO:
-    """Decode and validate JWT token.
-
-    Args:
-        token: JWT token string to decode.
-
-    Returns:
-        ResponsePayloadDTO: Decoded and validated token payload.
-
-    Raises:
-        HTTPException: If token is invalid or expired.
-    """
-    try:
-        auth_data: AuthConfigData = cast(AuthConfigData, settings.auth.auth_config)
-        payload: ResponsePayloadDTO = jwt.decode(
-            token, auth_data.secret_key, algorithms=[auth_data.algorithm]
-        )
-        valid_payload: ResponsePayloadDTO = ResponsePayloadDTO.model_validate(payload)
-    except (DecodeError, ExpiredSignatureError, Exception):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_NOT_VALID,
-        )
-
-    expire: int | None = valid_payload.exp
-
-    if expire is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_NOT_VALID,
-        )
-
-    expire_time: datetime = datetime.fromtimestamp(expire, tz=timezone.utc)
-
-    if expire_time < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.TOKEN_IS_EXPIRED,
-        )
-
-    return valid_payload
-
-
 async def get_current_active_user(
-    payload: ResponsePayloadDTO, user_dao: UserDAODep
+    user_id: int, user_dao: UserDAODep
 ) -> ResponseUserDTO:
-    """Get current active user from token payload.
+    """Get current active user from a decoded access-token payload.
 
     Args:
-        payload: Decoded token payload containing user ID.
-        user_dao: UserDAO Dependency.
+        user_id: User id integer.
+        user_dao: User data access dependency.
 
     Returns:
         ResponseUserDTO: Current authenticated user data.
 
     Raises:
-        HTTPException: If user not found or account is disabled.
+        HTTPException: If ``sub`` is missing or the user is not found.
+        CurrentUserNotActiveException: If the user exists but ``is_active`` is False.
     """
-    user_id: str = payload.sub
-
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.USER_NOT_FOUND,
-        )
-
     try:
-        user: User = await user_dao.get_one_user(
-            filter_by={BaseConstants.ID: int(user_id)}
-        )
+        user: User = await user_dao.get_one_user(filter_by={Fields.ID: user_id})
     except ObjectNotFoundException:
+        logger.exception(Messages.USER_NOT_FOUND)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=DependencyMessages.USER_NOT_FOUND,
+            detail=Messages.AUTH_DATA_NOT_CORRECT,
         )
 
     if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=BaseConstants.USER_DISABLED
-        )
+        logger.warning(f"{user_id} {Messages.USER_IS_NOT_ACTIVE}")
+        raise CurrentUserNotActiveException
 
     return ResponseUserDTO.model_validate(user)
