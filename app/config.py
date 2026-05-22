@@ -12,20 +12,24 @@ from fastapi.exceptions import ValidationException
 from pydantic import field_validator, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from app.schemas.config import AuthConfigData
+from app.schemas.config import AuthConfigDataDomain
 from app.constants import (
-    ConfigFieldNames,
-    EnvErrorsFieldNames,
+    ConfigFields,
     ConfigMessages,
-    ConfigValues,
-    POSTGRESQL_ASYNCPG_LINK_BEGIN,
+    ConfigPaths,
+    IGNORE,
+    MIN_PORT_NUMBER,
+    MAX_PORT_NUMBER,
+    MIN_ROUNDS_NUMBER,
+    MAX_ROUNDS_NUMBER,
+    MAX_SECRET_KEY_LEN,
 )
 
 
 class BaseAppSettings(BaseSettings):
     """Base for all settings classes. Loads from .env and ignores extra keys."""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=ConfigPaths.ENV_FILE_NAME, extra=IGNORE)
 
 
 class DatabaseSettings(BaseAppSettings):
@@ -37,7 +41,7 @@ class DatabaseSettings(BaseAppSettings):
     DB_USER: str
     DB_PASSWORD: str
 
-    @field_validator(ConfigFieldNames.DB_PORT)
+    @field_validator(ConfigFields.DB_PORT)
     @classmethod
     def validate_port(cls, port_number: int) -> int:
         """Validate database port is in valid range.
@@ -51,36 +55,58 @@ class DatabaseSettings(BaseAppSettings):
         Raises:
             ValueError: If port is not in valid range (1-65535).
         """
-        if (
-            not ConfigValues.MIN_PORT_NUMBER
-            <= port_number
-            <= ConfigValues.MAX_PORT_NUMBER
-        ):
+        if not MIN_PORT_NUMBER <= port_number <= MAX_PORT_NUMBER:
             raise ValueError(ConfigMessages.PORT_NUMBER_VALUE_ERROR)
         return port_number
 
     @computed_field  # type: ignore[prop-decorator]
     def db_url(self) -> str:
-        """Build async PostgresSQL connection URL from environment settings.
+        """Build an async PostgreSQL connection URL from environment settings.
 
         Returns:
-            str: Async connection URL for SQLAlchemy (postgresql+asyncpg).
+            str: Async SQLAlchemy URL using the ``postgresql+asyncpg`` driver.
         """
         return (
-            f"{POSTGRESQL_ASYNCPG_LINK_BEGIN}"
+            f"{ConfigPaths.POSTGRESQL_ASYNCPG_LINK_BEGIN}"
             f"{self.DB_USER}:{self.DB_PASSWORD}@"
             f"{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         )
 
 
-class AuthSettings(BaseAppSettings):
-    """Authentication settings: JWT secret, algorithm, and bcrypt rounds."""
+class RedisSettings(BaseAppSettings):
+    """Redis connection settings (host, port, database, credentials)."""
 
-    SECRET_KEY: str
+    REDIS_HOST: str
+    REDIS_PORT: int
+    REDIS_DB: int
+    REDIS_PASSWORD: str
+
+    @computed_field
+    def redis_url(self) -> str:
+        """Build Redis connection URL from environment settings.
+
+        Returns:
+            str: Redis URL of the form "redis://:<password>@<host>:<port>/<db>".
+        """
+        return f"{ConfigPaths.REDIS_LINK_BEGIN}{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
+
+class AuthSettings(BaseAppSettings):
+    """Authentication settings loaded from the environment.
+
+    Covers JWT signing secrets, algorithm, access and refresh lifetimes in seconds,
+    refresh ``jti`` entropy, and bcrypt cost rounds.
+    """
+
+    ACCESS_SECRET_KEY: str
+    REFRESH_SECRET_KEY: str
+    REFRESH_TOKEN_ENTROPY: int
     ALGORITHM: Literal["HS256", "HS384", "HS512"]
+    ACCESS_TOKEN_EXP_TIME_SEC: int
+    REFRESH_TOKEN_EXP_TIME_SEC: int
     ROUNDS: int
 
-    @field_validator(ConfigFieldNames.CRYPT_ROUNDS)
+    @field_validator(ConfigFields.CRYPT_ROUNDS)
     @classmethod
     def validate_rounds(cls, rounds_number: int) -> int:
         """Validate bcrypt rounds are in valid range.
@@ -94,15 +120,11 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If rounds are not in valid range (4-31).
         """
-        if (
-            not ConfigValues.MIN_ROUNDS_NUMBER
-            <= rounds_number
-            <= ConfigValues.MAX_ROUNDS_NUMBER
-        ):
+        if not MIN_ROUNDS_NUMBER <= rounds_number <= MAX_ROUNDS_NUMBER:
             raise ValueError(ConfigMessages.CRYPT_ROUNDS_VALUE_ERROR)
         return rounds_number
 
-    @field_validator(ConfigFieldNames.SECRET_KEY)
+    @field_validator(ConfigFields.ACCESS_SECRET_KEY, ConfigFields.REFRESH_SECRET_KEY)
     @classmethod
     def validate_secret_key(cls, secret_key: str) -> str:
         """Validate secret key is not empty and has minimum length.
@@ -116,20 +138,25 @@ class AuthSettings(BaseAppSettings):
         Raises:
             ValueError: If secret key is empty or too short (less than 32 characters).
         """
-        if not secret_key or len(secret_key) < ConfigValues.MAX_SECRET_KEY_LEN:
+        if not secret_key or len(secret_key) < MAX_SECRET_KEY_LEN:
             raise ValueError(ConfigMessages.SECRET_KEY_VALUE_ERROR)
         return secret_key
 
     @computed_field  # type: ignore[prop-decorator]
-    def auth_config(self) -> AuthConfigData:
-        """Get authentication configuration data.
+    def auth_config(self) -> AuthConfigDataDomain:
+        """Map environment auth settings to the token service configuration DTO.
 
         Returns:
-            AuthConfigData: Authentication data containing secret key and algorithm.
+            AuthConfigDataDomain: JWT secrets, algorithm, lifetimes, and refresh ``jti``
+                entropy. Bcrypt ``ROUNDS`` remain on this settings object only.
         """
-        return AuthConfigData(
-            secret_key=self.SECRET_KEY,
+        return AuthConfigDataDomain(
+            access_secret_key=self.ACCESS_SECRET_KEY,
+            refresh_secret_key=self.REFRESH_SECRET_KEY,
+            refresh_token_entropy=self.REFRESH_TOKEN_ENTROPY,
             algorithm=self.ALGORITHM,
+            access_token_exp_time_sec=self.ACCESS_TOKEN_EXP_TIME_SEC,
+            refresh_token_exp_time_sec=self.REFRESH_TOKEN_EXP_TIME_SEC,
         )
 
 
@@ -138,6 +165,7 @@ class Settings(BaseAppSettings):
 
     database: DatabaseSettings
     auth: AuthSettings
+    redis: RedisSettings
 
 
 def get_settings() -> Settings:
@@ -150,18 +178,20 @@ def get_settings() -> Settings:
         ValidationException: If required environment variables are missing or invalid.
     """
     try:
-        project_settings = Settings(database=DatabaseSettings(), auth=AuthSettings())
+        project_settings = Settings(
+            database=DatabaseSettings(), auth=AuthSettings(), redis=RedisSettings()
+        )
     except ValidationException as er:
         for env_error in er.errors():
             env_name: str
             env_msg: str
 
-            if env_error[EnvErrorsFieldNames.LOC]:
-                env_name = env_error[EnvErrorsFieldNames.LOC][0]
+            if env_error[ConfigFields.LOC]:
+                env_name = env_error[ConfigFields.LOC][0]
             else:
                 env_name = ConfigMessages.ENV_ERROR_UNKNOWN
 
-            env_msg = env_error[EnvErrorsFieldNames.ENV_ERROR_MESSAGE]
+            env_msg = env_error[ConfigFields.ENV_ERROR_MESSAGE]
             logger.error(f"{ConfigMessages.CONFIG_ERROR} '{env_name}': {env_msg}")
         raise
     else:

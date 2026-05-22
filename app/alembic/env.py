@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from app.database import DATABASE_URL, BaseSQLModel
+from app.storage.database import DATABASE_URL, BaseSQLModel
 import app.models.models  # noqa: F401
 
 # This is the Alembic Config object, which provides

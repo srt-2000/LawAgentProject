@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +12,7 @@
             <div class="topbar-title">Profile</div>
         </div>
 
-        <a class="profile-link" href="/">Чаты</a>
+        <a class="profile-link" href="/">Chats</a>
     </div>
 
     <div class="profile-wrapper">
@@ -56,17 +56,17 @@
 
     <script>
         async function logout() {
-            if (confirm('Вы уверены, что хотите выйти из всех устройств?')) {
+            if (confirm("Are you sure you want to log out on all devices?")) {
                 try {
-                    const response = await fetch('/user/logout', {
-                        method: 'POST',
-                        credentials: 'include'
+                    const response = await fetch("/user/logout", {
+                        method: "POST",
+                        credentials: "include",
                     });
                     if (response.ok) {
-                        window.location.href = '/';
+                        window.location.href = "/login";
                     }
                 } catch (error) {
-                    console.error('Logout error:', error);
+                    console.error("Logout error:", error);
                 }
             }
         }

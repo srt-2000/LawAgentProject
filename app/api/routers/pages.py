@@ -6,12 +6,19 @@ from fastapi.responses import HTMLResponse
 from fastapi import APIRouter, Request
 from starlette.templating import Jinja2Templates
 
-from app.api.routers.constants import RouterFieldNames, FieldValues
+from app.api.constants import (
+    Fields,
+    Values,
+    TEMPLATES_PATH,
+    INDEX_HTML,
+    LOGIN_HTML,
+    PROFILE_HTML,
+)
 
 from app.api.dependencies.users import CurrentUserDep
 
-templates = Jinja2Templates(directory=FieldValues.TEMPLATES_PATH)
-router = APIRouter(tags=[FieldValues.PAGES_TAG])
+templates = Jinja2Templates(directory=TEMPLATES_PATH)
+router = APIRouter(tags=[Values.PAGES_TAG])
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -26,11 +33,11 @@ async def main_page(request: Request, current_user: CurrentUserDep) -> HTMLRespo
         HTMLResponse: Rendered index.html template.
     """
     return templates.TemplateResponse(
-        name=FieldValues.INDEX_HTML,
+        name=INDEX_HTML,
         context={
-            RouterFieldNames.REQUEST: request,
-            RouterFieldNames.PROFILE: current_user
-        }
+            Fields.REQUEST: request,
+            Fields.PROFILE: current_user,
+        },
     )
 
 
@@ -46,19 +53,17 @@ async def profile(request: Request, current_user: CurrentUserDep) -> HTMLRespons
         HTMLResponse: Rendered profile.html template with user data.
     """
     return templates.TemplateResponse(
-        name=FieldValues.PROFILE_HTML,
+        name=PROFILE_HTML,
         context={
-            RouterFieldNames.REQUEST: request,
-            RouterFieldNames.PROFILE: current_user
-        }
+            Fields.REQUEST: request,
+            Fields.PROFILE: current_user,
+        },
     )
+
 
 @router.get("/login", response_class=HTMLResponse)
 async def login(request: Request) -> HTMLResponse:
     """Render the login/register page."""
     return templates.TemplateResponse(
-        name=FieldValues.LOGIN_HTML,
-        context={
-            RouterFieldNames.REQUEST: request
-        }
+        name=LOGIN_HTML, context={Fields.REQUEST: request}
     )

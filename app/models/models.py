@@ -5,15 +5,15 @@ User has many Chats; Chat has many Messages. Role enum for user role.
 Cascade deletes: user -> chats -> messages.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy import Integer, String, ForeignKey, Text, BOOLEAN, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import BaseSQLModel
+from app.storage.database import BaseSQLModel
 
 
-class Role(Enum):
+class Role(StrEnum):
     """User role enumeration."""
 
     admin = "admin"
@@ -43,7 +43,7 @@ class User(BaseSQLModel):
     chats: Mapped[list["Chat"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
-        order_by=lambda: (Chat.created_at.asc(), Chat.id.asc())
+        order_by=lambda: (Chat.created_at.asc(), Chat.id.asc()),
     )
 
     def __str__(self) -> str:
@@ -89,7 +89,7 @@ class Chat(BaseSQLModel):
     messages: Mapped[list["Message"]] = relationship(
         back_populates="chat",
         cascade="all, delete-orphan",
-        order_by=lambda: (Message.created_at.asc(), Message.id.asc())
+        order_by=lambda: (Message.created_at.asc(), Message.id.asc()),
     )
 
     def __str__(self) -> str:
