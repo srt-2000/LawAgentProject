@@ -10,7 +10,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Literal
 
 import jwt
-import loguru
+from loguru import logger
 from fastapi import Request, WebSocket
 from jwt import DecodeError, ExpiredSignatureError
 
@@ -18,7 +18,7 @@ from app.dao.redis_storage import RedisDAO
 
 from app.schemas.config import AuthConfigDataDomain
 from app.schemas.services import (
-    ResponseAccessTokenPayloadDTO,
+    AccessTokenPayloadDTO,
     RedisRefreshTokenDTO,
     ResponseRefreshTokenPayloadDTO,
 )
@@ -105,38 +105,38 @@ class TokenService:
         )
         return RedisRefreshTokenDTO.model_validate(refresh_token_dto)
 
-    def decode_access_token(self, token: str) -> ResponseAccessTokenPayloadDTO:
+    def decode_access_token(self, token: str) -> AccessTokenPayloadDTO:
         """Decode and validate a JWT access token.
 
         Args:
             token: JWT access token string to decode.
 
         Returns:
-            ResponseAccessTokenPayloadDTO: Decoded and validated token payload.
+            AccessTokenPayloadDTO: Decoded and validated token payload.
 
         Raises:
             TokenCheckFailed: If token is invalid, expired, or missing expiration.
         """
         try:
-            payload: ResponseAccessTokenPayloadDTO = jwt.decode(
+            payload: AccessTokenPayloadDTO = jwt.decode(
                 jwt=token,
                 key=self.auth_data.access_secret_key,
                 algorithms=[self.auth_data.algorithm],
             )
-            valid_payload: ResponseAccessTokenPayloadDTO = (
-                ResponseAccessTokenPayloadDTO.model_validate(payload)
+            valid_payload: AccessTokenPayloadDTO = AccessTokenPayloadDTO.model_validate(
+                payload
             )
         except ExpiredSignatureError:
-            loguru.logger.warning(Messages.TOKEN_IS_EXPIRED)
+            logger.warning(Messages.TOKEN_IS_EXPIRED)
             raise TokenCheckFailed
         except DecodeError:
-            loguru.logger.warning(Messages.ACCESS_TOKEN_DECODE_ERROR)
+            logger.warning(Messages.ACCESS_TOKEN_DECODE_ERROR)
             raise TokenCheckFailed
 
         expire: int | None = valid_payload.exp
 
         if expire is None:
-            loguru.logger.warning(Messages.TOKEN_EXPIRATION_IS_NONE)
+            logger.warning(Messages.TOKEN_EXPIRATION_IS_NONE)
             raise TokenCheckFailed
 
         return valid_payload
@@ -165,14 +165,14 @@ class TokenService:
                 ResponseRefreshTokenPayloadDTO.model_validate(payload)
             )
         except ExpiredSignatureError:
-            loguru.logger.warning(Messages.TOKEN_IS_EXPIRED)
+            logger.warning(Messages.TOKEN_IS_EXPIRED)
             raise TokenCheckFailed
         except DecodeError:
-            loguru.logger.warning(Messages.REFRESH_TOKEN_DECODE_ERROR)
+            logger.warning(Messages.REFRESH_TOKEN_DECODE_ERROR)
             raise TokenCheckFailed
 
         if valid_payload.typ != REFRESH:
-            loguru.logger.warning(Messages.INVALID_TOKEN_TYPE)
+            logger.warning(Messages.INVALID_TOKEN_TYPE)
             raise TokenCheckFailed
 
         return valid_payload
@@ -193,7 +193,7 @@ class TokenService:
         current_token: str | None = request.cookies.get(USERS_ACCESS_TOKEN)
 
         if not current_token:
-            loguru.logger.warning(Messages.TOKEN_NOT_FOUND)
+            logger.warning(Messages.TOKEN_NOT_FOUND)
             raise TokenCheckFailed
 
         return current_token
@@ -214,7 +214,7 @@ class TokenService:
         current_token: str | None = storage.cookies.get(USERS_ACCESS_TOKEN)
 
         if not current_token:
-            loguru.logger.warning(Messages.TOKEN_NOT_FOUND)
+            logger.warning(Messages.TOKEN_NOT_FOUND)
             raise TokenCheckFailed
 
         return current_token
@@ -235,7 +235,7 @@ class TokenService:
         current_token: str | None = request.cookies.get(USERS_REFRESH_TOKEN)
 
         if not current_token:
-            loguru.logger.warning(Messages.TOKEN_NOT_FOUND)
+            logger.warning(Messages.TOKEN_NOT_FOUND)
             raise TokenCheckFailed
 
         return current_token
@@ -292,7 +292,7 @@ class RefreshTokenSessionManager:
         deleted_user_id: str = await self.dao.get_del_data_by_key(payload_dto.jti)
 
         if deleted_user_id != payload_dto.sub:
-            loguru.logger.warning(
+            logger.warning(
                 f"{Messages.REFRESH_TOKEN_REDIS_ERROR} {Messages.USER_ID_DONT_MATCH}"
             )
             raise TokenCheckFailed

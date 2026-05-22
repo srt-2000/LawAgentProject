@@ -9,11 +9,11 @@ from loguru import logger
 from starlette.status import WS_1008_POLICY_VIOLATION
 
 from app.api.dependencies.base import get_current_active_user
-from app.api.constants import Messages, REASON_LEN_LIMIT
+from app.api.constants import Messages, WS_AUTH_REASON
 from app.api.dependencies.dao import UserDAODep
 from app.api.dependencies.exceptions import CurrentUserNotActiveException
 from app.api.dependencies.tokens import TokenServiceDep
-from app.schemas.services import ResponseAccessTokenPayloadDTO
+from app.schemas.services import AccessTokenPayloadDTO
 from app.schemas.users import ResponseUserDTO
 from app.services.exceptions import TokenCheckFailed
 
@@ -38,31 +38,42 @@ async def get_websocket_current_active_user(
             inactive, or user resolution fails; close reason is truncated to
             ``REASON_LEN_LIMIT``.
     """
-
     try:
         ws_access_token: str = token_service.get_access_token_from_websocket(websocket)
-        payload: ResponseAccessTokenPayloadDTO = token_service.decode_access_token(
+        payload: AccessTokenPayloadDTO = token_service.decode_access_token(
             ws_access_token
         )
-        current_active_user: ResponseUserDTO = await get_current_active_user(
-            payload, user_dao
-        )
-    except CurrentUserNotActiveException as exception:
-        reason: str = Messages.AUTH_DATA_NOT_CORRECT[:REASON_LEN_LIMIT]
+    except TokenCheckFailed as exception:
+        reason: str = WS_AUTH_REASON
         logger.warning(str(exception))
         raise WebSocketException(
             code=WS_1008_POLICY_VIOLATION,
             reason=reason,
         ) from exception
-    except TokenCheckFailed as exception:
-        reason = Messages.AUTH_DATA_NOT_CORRECT[:REASON_LEN_LIMIT]
+
+    user_id: int = int(payload.sub)
+
+    if not user_id:
+        logger.warning(Messages.NO_USER_ID_IN_TOKEN)
+        reason = WS_AUTH_REASON
+        raise WebSocketException(
+            code=WS_1008_POLICY_VIOLATION,
+            reason=reason,
+        )
+
+    try:
+        current_active_user: ResponseUserDTO = await get_current_active_user(
+            user_id, user_dao
+        )
+    except CurrentUserNotActiveException as exception:
+        reason = WS_AUTH_REASON
         logger.warning(str(exception))
         raise WebSocketException(
             code=WS_1008_POLICY_VIOLATION,
             reason=reason,
         ) from exception
     except HTTPException as exception:
-        reason = Messages.AUTH_DATA_NOT_CORRECT[:REASON_LEN_LIMIT]
+        reason = WS_AUTH_REASON
         logger.warning(f"{Messages.ERROR_GET_WS_ACTIVE_USER} - {str(exception)}")
         raise WebSocketException(
             code=WS_1008_POLICY_VIOLATION,

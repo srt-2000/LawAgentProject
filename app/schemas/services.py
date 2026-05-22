@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict
 from app.schemas.constants import FORBID_VALUE
 
 
-class ResponseAccessTokenPayloadDTO(BaseModel):
+class AccessTokenPayloadDTO(BaseModel):
     """Decoded JWT payload after verification.
 
     Attributes:

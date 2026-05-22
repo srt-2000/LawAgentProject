@@ -73,3 +73,6 @@ class Messages(StrEnum):
     USER_IS_NOT_ACTIVE = "User is not active"
     ERROR_GET_WS_ACTIVE_USER = "Error while getting active user from websocket"
     SESSION_FAILED = "Session failed"
+
+
+WS_AUTH_REASON: str = Messages.AUTH_DATA_NOT_CORRECT[:REASON_LEN_LIMIT]
